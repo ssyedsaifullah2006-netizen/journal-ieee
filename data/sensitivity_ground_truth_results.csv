@@ -1,0 +1,7 @@
+Assumed Ground Truth Y*,Unweighted MAE,Heuristic MAE,NC-IPS MAE,PACE MAE,Best Estimator
+-0.400,0.375,0.407,0.197,0.305,NC-IPS
+-0.200,0.175,0.207,0.006,0.105,NC-IPS
+-0.100,0.075,0.107,0.103,0.010,PACE
+-0.025,0.004,0.032,0.178,0.070,Unweighted
++0.000,0.025,0.008,0.203,0.095,Heuristic
++0.100,0.125,0.093,0.303,0.195,Heuristic

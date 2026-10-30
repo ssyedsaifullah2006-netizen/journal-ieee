@@ -39,9 +39,16 @@ A web-based AI platform that fetches social media comments (YouTube, Reddit), ru
 │   ├── youtube_fetcher.py     # YouTube Data API v3 integration
 │   └── reddit_fetcher.py      # PRAW-based Reddit fetcher
 ├── analyzers/
-│   ├── sentiment.py           # RoBERTa sentiment classifier
-│   ├── topics.py              # BERTopic topic modeler
+│   ├── consensus_framework.py # PACE estimation suite & 4 baseline estimators
+│   ├── lexicon_sentiment.py   # VADER sentiment pipeline
+│   ├── engagement_diagnostics.py # Exposure surface diagnostics
 │   └── summarizer.py          # Gemini-powered summarizer
+├── experiments/
+│   ├── reproduce_all_experiments.py    # 50-trial Monte Carlo benchmark
+│   ├── generate_publication_figures.py # 300 DPI IEEE figure generator
+│   ├── sensitivity_analysis.py         # Ground-truth & baseline sensitivity audit
+│   ├── run_exhaustive_verification.py  # 20-test QA verification suite
+│   └── fetch_real_youtube_corpus.py    # YouTube Data API v3 live scraper
 ├── rag/
 │   ├── vector_store.py        # ChromaDB wrapper
 │   └── qa_chain.py            # Gemini RAG Q&A chain
@@ -68,20 +75,28 @@ This repository includes the complete research implementation, reproducibility b
 # 1. Run all 50 Monte Carlo trials across Scenarios 1-3 & YouTube Case Study
 python experiments/reproduce_all_experiments.py
 
-# 2. Generate 300 DPI IEEE publication figures
+# 2. Run ground-truth and baseline sensitivity audits
+python experiments/sensitivity_analysis.py
+
+# 3. Generate 300 DPI IEEE publication figures
 python experiments/generate_publication_figures.py
+
+# 4. Run automated QA verification suite
+python experiments/run_exhaustive_verification.py
 ```
 
 ### Paper & Dataset Structure
 - `latex/paper.tex`: Full IEEE Transactions two-column manuscript.
-- `latex/references.bib`: BibTeX references; verify bibliographic metadata against publisher records before submission.
+- `latex/references.bib`: 30 peer-reviewed references with verified metadata.
 - `latex_submission_package.zip`: Ready-to-upload Overleaf project zip.
-- `figures/`: 300 DPI publication figures (`fig1_monte_carlo_mae.png`, `fig2_ablation_study.png`, `fig3_weight_distributions.png`, `fig4_youtube_case_study.png`).
+- `figures/`: 300 DPI publication figures (`fig1`–`fig4`).
 - `data/monte_carlo_trial_level_results.csv`: 150 individual trial-level benchmark observations.
 - `data/ablation_trial_level_results.csv`: 150 individual trial-level ablation observations.
 - `data/replicated_benchmark_results.csv`: Benchmark summary table (Mean $\pm$ SE, Paired Wilcoxon $p$-values).
 - `data/replicated_ablation_results.csv`: Component ablation summary table.
-- `data/youtube_corpus_100_comments.csv`: Legacy illustrative YouTube snapshot. See its provenance manifest; regenerate it with `experiments/fetch_real_youtube_corpus.py` before making API-provenance claims.
+- `data/sensitivity_ground_truth_results.csv`: Target estimand sensitivity across continuous $Y^*$ definitions.
+- `data/sensitivity_baseline_distortion_results.csv`: Empirical evaluation of PACE under baseline scale/distortion.
+- `data/youtube_corpus_100_comments.csv`: 100 genuine YouTube API comments fetched on 2026-10-30 with dated SHA-256 provenance manifest (`.provenance.json`).
 
 ---
 

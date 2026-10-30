@@ -1,0 +1,8 @@
+Perturbation,PACE Consensus Estimate,Delta from Nominal,Max Weight Share
+0.25x Baseline Scale,0.0492,-0.0301,0.0231
+0.50x Baseline Scale,0.0695,-0.0097,0.0303
+1.00x Nominal Baseline,0.0792,0.0,0.0272
+1.50x Baseline Scale,0.0828,0.0036,0.0194
+2.00x Baseline Scale,0.0824,0.0031,0.0192
+Square Root Distortion (sqrt(E)),0.108,0.0288,0.0147
+Superlinear Distortion (E^1.2),0.0812,0.002,0.0184

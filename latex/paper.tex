@@ -66,8 +66,8 @@ The main contributions of this work are summarized as follows:
 \begin{itemize}
     \item \textbf{Exposure-Conditioned Baseline Model:} We formalize expected comment engagement $\mathbb{E}[L_i \mid r_i, \Delta t_i]$ via a closed-form log-linear regression combined with Duan's smearing retransformation factor \cite{duan1983smearing} to correct for retransformation bias under stated error assumptions.
     \item \textbf{Exposure-Conditioned Engagement Residuals \& Weight Auditing:} We define the residual $\delta_i$ to quantify whether a comment overperformed or underperformed relative to its exposure opportunity. Rather than asserting theoretical non-domination, we evaluate weight concentration empirically via the Maximum Normalized Weight Share ($w_{\max}^* = w_{\max} / \sum w_i$) and the Effective Sample Size (ESS).
-    \item \textbf{Replicated Multi-Trial Validation ($M=50$):} We evaluate PACE against three established baselines across $M=50$ independent simulation trials per scenario, reporting Paired Wilcoxon Signed-Rank Tests \cite{wilcoxon1945individual} on Mean Absolute Error (MAE), top-10\% pruning stability, and a strictly isolated component ablation study.
-    \item \textbf{Illustrative YouTube Case Study:} We apply the method to a static $N=100$ YouTube snapshot and report descriptive weight diagnostics. This case study is not an accuracy benchmark, causal estimate, or provenance proof; a dated, hashed collection manifest is required for future regenerated snapshots.
+    \item \textbf{Replicated Multi-Trial Validation ($M=50$) and Sensitivity Analysis:} We evaluate PACE against three established baselines across $M=50$ independent simulation trials per scenario, reporting Paired Wilcoxon Signed-Rank Tests \cite{wilcoxon1945individual} on Mean Absolute Error (MAE), top-10\% pruning stability, a component ablation study, and an open ground-truth sensitivity analysis mapping performance across diverse target specifications.
+    \item \textbf{Observational Case Study \& Diagnostic Audit:} We apply the method to a dated $N=100$ YouTube snapshot with SHA-256 provenance, reporting descriptive weight diagnostics and systematically auditing practical constraints including ranking endogeneity, rule-based lexicon zero-inflation, and baseline scale sensitivity.
 \end{itemize}
 
 \section{Related Work}
@@ -79,7 +79,7 @@ Position bias in list-based user interfaces is well-established in Information R
 Modeling social media discussions as hierarchical trees dates back to foundational work by Zubiaga et al. \cite{zubiaga2016stance}, who modeled conversation trees for rumour stance classification (support, denial, query, comment). G{\'o}mez et al. \cite{gomez2008statistical} characterized structural and temporal branching patterns in threaded discussions. Recent studies in Springer's \textit{Social Network Analysis and Mining} (SNAM) have examined algorithmic drift in YouTube recommendations \cite{cakmak2024bias} and anomalous commenter behavior \cite{shajari2025safeguarding}. Our framework does not claim to perform semantic tree stance classification; rather, we incorporate a structural tree damping factor to reflect the narrower conversational scope and lower visual reach of nested reply chains.
 
 \subsection{Self-Selection and the Spiral of Silence}
-The ``spiral of silence'' theory introduced by Noelle-Neumann \cite{noelle1974spiral} posits that individuals perceiving their opinion to be in the minority tend to remain silent. Zhao, Yang, and Bernstein \cite{zhao2026spiral} empirically established that up to 72.6\% of online community members perceiving themselves in the ideological minority refrain from public posting. This self-selection confirms that raw text counts represent vocal participants rather than whole viewer populations, reinforcing the necessity of carefully defining the target estimand as discourse consensus.
+The ``spiral of silence'' theory introduced by Noelle-Neumann \cite{noelle1974spiral} posits that individuals perceiving their opinion to be in the minority tend to remain silent. Zhao, Yang, and Bernstein \cite{zhao2026spiral} empirically established that up to 72.1\% of online community members perceiving themselves in the ideological minority refrain from public posting. This self-selection confirms that raw text counts represent vocal participants rather than whole viewer populations, reinforcing the necessity of carefully defining the target estimand as discourse consensus.
 
 \subsection{Robust Estimation in Social Feedback}
 Social interaction distributions exhibit heavy tails and vulnerability to strategic manipulation \cite{muchnik2013social, borghol2012untold}. Classic robust statistics provide M-estimators and bounded-influence influence functions to limit the damage of arbitrary contamination \cite{huber1981robust, hampel1986robust, rousseeuw1993alternatives}. PACE builds upon these principles by standardizing residuals via the Median Absolute Deviation (MAD) and passing them through a sigmoidal transfer function. For aspect-level and fine-grained sentiment benchmarks, the SemEval shared tasks \cite{pontiki2016semeval} have established evaluation protocols that inform how sentiment classifiers are assessed.
@@ -234,18 +234,19 @@ To ensure complete reproducibility, the generative processes for all synthetic s
 \section{Results and Discussion}
 
 \begin{table*}[t]
-\caption{Replicated Monte Carlo Benchmark ($M = 50$ Trials, Mean $\pm$ Standard Error)}
+\caption{Replicated Benchmark: Synthetic Error ($M = 50$ Trials, MAE $\pm$ SE) and Observational Estimates ($\hat{\mu}$)}
 \label{tab:benchmark}
 \centering
 \begin{tabular}{lccccccccccc}
 \toprule
-\textbf{Scenario / Corpus} & \textbf{$N$} & \textbf{$Y^*$} & \textbf{Unweighted} & \textbf{Heuristic} & \textbf{NC-IPS} & \textbf{PACE (Ours)} & \textbf{Wilcoxon $p$} & \textbf{Heur $w_{\max}^*$} & \textbf{PACE $w_{\max}^*$} & \textbf{Heur $\rho$} & \textbf{PACE $\rho$} \\
+\textbf{Scenario / Corpus} & \textbf{$N$} & \textbf{Target $Y^*$} & \textbf{Unweighted} & \textbf{Heuristic} & \textbf{NC-IPS} & \textbf{PACE (Ours)} & \textbf{Test $p$-value} & \textbf{Heur $w_{\max}^*$} & \textbf{PACE $w_{\max}^*$} & \textbf{Heur $\rho$} & \textbf{PACE $\rho$} \\
 \midrule
-1. Viral Outlier & 50 & 0.600 & 0.030 $\pm$ 0.001 & 0.086 $\pm$ 0.001 & 0.008 $\pm$ 0.001 & \textbf{0.061 $\pm$ 0.001} & $\mathbf{p < 0.00001}$ & 0.057 & \textbf{0.041} & 0.6006 & \textbf{0.7181} \\
-2. Late Groundswell & 60 & -0.100 & 0.075 $\pm$ 0.001 & 0.107 $\pm$ 0.001 & 0.103 $\pm$ 0.001 & \textbf{0.010 $\pm$ 0.001} & $\mathbf{p < 0.00001}$ & 0.030 & 0.033 & 0.8387 & \textbf{0.9649} \\
-3. Democratic Consensus & 50 & 0.000 & 0.000 $\pm$ 0.000 & 0.009 $\pm$ 0.001 & 0.024 $\pm$ 0.003 & \textbf{0.021 $\pm$ 0.002} & $p = 0.99999$ & 0.028 & 0.033 & 0.9487 & \textbf{0.9639} \\
-4. Real YouTube (\texttt{dQw4}) & 100 & Obs. & 0.114 ($\mu$) & 0.123 ($\mu$) & 0.116 ($\mu$) & \textbf{0.079 ($\mu$)} & $p = 0.36582$ & 0.018 & 0.027 & 0.9928 & 0.9542 \\
+1. Viral Outlier & 50 & 0.600 & 0.030 $\pm$ 0.001 & 0.086 $\pm$ 0.001 & 0.008 $\pm$ 0.001 & 0.061 $\pm$ 0.001 & $p < 0.00001^{\dagger}$ & 0.057 & 0.041 & 0.6006 & 0.7181 \\
+2. Late Groundswell & 60 & -0.100 & 0.075 $\pm$ 0.001 & 0.107 $\pm$ 0.001 & 0.103 $\pm$ 0.001 & \textbf{0.010 $\pm$ 0.001} & $p < 0.00001^{\dagger}$ & 0.030 & 0.033 & 0.8387 & 0.9649 \\
+3. Democratic Consensus & 50 & 0.000 & \textbf{0.000 $\pm$ 0.000} & 0.009 $\pm$ 0.001 & 0.024 $\pm$ 0.003 & 0.021 $\pm$ 0.002 & $p = 0.99999^{\dagger}$ & 0.028 & 0.033 & 0.9487 & 0.9639 \\
+4. Real YouTube (\texttt{dQw4}) & 100 & Obs. & 0.114 ($\hat{\mu}$) & 0.123 ($\hat{\mu}$) & 0.116 ($\hat{\mu}$) & 0.079 ($\hat{\mu}$) & $p = 0.36582^{\ddagger}$ & 0.018 & 0.027 & 0.9928 & 0.9542 \\
 \bottomrule
+\multicolumn{12}{l}{\footnotesize $^{\dagger}$ Paired Wilcoxon signed-rank test on trial-level MAE (Heuristic vs. PACE, $H_1: \text{MAE}_{\text{Heur}} > \text{MAE}_{\text{PACE}}$). $^{\ddagger}$ Plus-one Monte Carlo permutation test evaluating sentiment exchangeability.}
 \end{tabular}
 \end{table*}
 
@@ -282,9 +283,9 @@ To ensure complete reproducibility, the generative processes for all synthetic s
 In Scenario 1, a single early comment at rank \#1 accumulates 15,000 likes with extreme negative sentiment ($-0.900$), conflicting with 49 positive comments ($+0.600$).
 \begin{itemize}
     \item Over 50 independent trials, the Heuristic estimator exhibits an average $\text{MAE} = 0.086 \pm 0.001$.
-    \item PACE achieves $\mathbf{\text{MAE} = 0.061 \pm 0.001}$, improving on the heuristic baseline. However, the unweighted ($0.030 \pm 0.001$) and NC-IPS ($0.008 \pm 0.001$) baselines are more accurate in this synthetic scenario; PACE is therefore not presented as uniformly superior.
-    \item Weight auditing reveals that the Heuristic allows the outlier to capture $5.7\%$ of total corpus weight ($w_{\max}^* = 0.057$), while PACE reduces its weight share to $\mathbf{0.041}$ ($w_{\max}^* = 0.041$), a 28\% reduction.
-    \item Pruning stability under top-10\% removal improves from $\rho = 0.6006$ (Heuristic) to $\mathbf{\rho = 0.7181}$ (PACE), an improvement of +19.6\%.
+    \item PACE achieves $\text{MAE} = 0.061 \pm 0.001$, improving on the heuristic baseline ($p < 0.00001$). However, the unweighted ($0.030 \pm 0.001$) and NC-IPS ($0.008 \pm 0.001$) baselines are more accurate in this synthetic scenario; PACE is therefore not presented as uniformly superior.
+    \item \textbf{Outlier Weight Share vs. Equal Weighting:} Weight auditing reveals that the Heuristic allows the outlier to capture $5.7\%$ of total corpus weight ($w_{\max}^* = 0.057$). PACE curtails this concentration to $w_{\max}^* = 0.041$, a 28\% reduction. However, equal weighting assigns strictly $1/N = 1/50 = 2.0\%$ weight to the outlier. Because PACE rewards raw endorsement above the fitted baseline, it assigns $4.1\%$ to the viral comment—higher than equal weighting—which explains why unweighted averaging outperforms PACE in this static configuration.
+    \item Pruning stability under top-10\% removal improves from $\rho = 0.6006$ (Heuristic) to $\rho = 0.7181$ (PACE), an improvement of +19.6\%.
 \end{itemize}
 
 \subsection{Recovery of Suppressed Community Groundswells (Scenario 2)}
@@ -292,8 +293,8 @@ In Scenario 2, late-arriving comments expose a critical defect in conventional h
 \begin{itemize}
     \item The Heuristic estimator is trapped near positive zero ($\text{MAE} = 0.107 \pm 0.001$), failing to detect the negative groundswell.
     \item NC-IPS over-corrects to $\text{MAE} = 0.103 \pm 0.001$.
-    \item PACE recovers true community consensus with $\mathbf{\text{MAE} = 0.010 \pm 0.001}$, achieving a \textbf{90.7\% reduction in estimation error} ($p < 0.00001$).
-    \item Pruning stability reaches $\rho = 0.9649$ vs. $0.8387$ for Heuristic.
+    \item When ground truth is targeted at $Y^* = -0.100$ (representing recovery of late-emerging feedback), PACE achieves $\mathbf{\text{MAE} = 0.010 \pm 0.001}$ ($p < 0.00001$), with pruning stability $\rho = 0.9649$ vs. $0.8387$ for Heuristic.
+    \item \textbf{Sensitivity to Ground-Truth Specification ($Y^*$):} We emphasize that the magnitude of error reduction is conditioned on the definition of $Y^*$. If the ground truth is instead defined as the unweighted sample mean of active participants ($\bar{s} \approx -0.025$), PACE exhibits $\text{MAE} = 0.070$, while the heuristic achieves $0.032$ and equal weighting trivially achieves $0.000$. Under a neutral null ($Y^* = 0.000$), the heuristic achieves $\text{MAE} = 0.008$ versus PACE's $0.095$. Across our systematic sensitivity audit (`experiments/sensitivity_analysis.py`), PACE outperforms baselines specifically when the evaluation objective is to detect delayed, exposure-suppressed community groundswells rather than unweighted participant averaging.
 \end{itemize}
 
 \subsection{Fidelity and Boundary Conditions in Democratic Consensus (Scenario 3)}
@@ -313,19 +314,22 @@ Table~\ref{tab:ablation} and Fig.~\ref{fig:ablation} reveal a clear scenario-dep
 This demonstrates that \textbf{temporal decay and smearing calibration are specifically essential for dynamic, time-evolving discussions where late consensus diverges from early traffic}.
 
 \subsection{Real-World YouTube Case Study (Scenario 4)}
-Dataset 4 is an illustrative static YouTube snapshot (\texttt{dQw4w9WgXcQ}, $N=100$) stored in \texttt{data/youtube\_corpus\_100\_comments.csv} (Fig.~\ref{fig:youtube}). The snapshot was collected via the YouTube Data API v3 on 2026-10-30 with a SHA-256-hashed provenance manifest; its rank records retrieval-time relevance order rather than historical display exposure.
+Dataset 4 is an observational case study on 100 comments from video \texttt{dQw4w9WgXcQ} (Fig.~\ref{fig:youtube}), collected via the YouTube Data API v3 with a dated SHA-256 provenance manifest. While serving as an illustrative implementation check, auditing this corpus reveals important practical limitations in semantic analysis and exposure modeling:
 \begin{itemize}
-    \item Consensus estimates are descriptive: Unweighted $\mu = 0.114$, Heuristic $\mu = 0.123$, and PACE $\mu = 0.079$. Because no participant-level consensus ground truth is observed, these values are not accuracy estimates. The permutation test ($p = 0.366$) confirms no significant difference between PACE and Heuristic weight vectors on this snapshot.
-    \item The snapshot's pruning-stability values are descriptive ($\rho = 0.9928$ for Heuristic and $\rho = 0.9542$ for PACE); they do not validate causal exposure correction. In this snapshot, PACE exhibits somewhat lower stability than the Heuristic, which is consistent with its stronger reweighting of late-arriving comments.
-    \item Effective Sample Size is $58.0 / 100$. This describes concentration for this snapshot and does not prove broad community representation.
-    \item \textbf{In-sample fit diagnostic:} The log-linear exposure-proxy model achieves log-scale $R^2 = 0.61$ but a total expected-to-observed like ratio of $\approx 6.2$, indicating that the model systematically over-predicts absolute engagement counts on this corpus. This poor absolute calibration is attributable to the extreme arrival-hour range ($\sim$79,000--149,000~h) and the heavy-tailed, non-stationary like distribution. Importantly, PACE uses only the \emph{rank-order} of standardized residuals (via MAD normalization and sigmoidal gating) rather than absolute predicted counts, so the weight vector is robust to monotone calibration errors. Nevertheless, this diagnostic underscores that the YouTube snapshot serves only as a qualitative illustration and not as evidence of calibrated real-world prediction.
+    \item \textbf{Lexicon Degradation in Meme Discourse:} 46 of the 100 comments (46\%) receive an exact compound polarity of $0.000$ from VADER. This includes the top viral comments with $1,011,942$ and $569,620$ likes. Colloquial praise (e.g., \emph{``this is actually a banging song''}) scores $0.000$, while positive slang (\emph{``so sick''}) misclassifies as negative ($-0.640$). Restricting analysis to the 54 non-zero comments yields a mean polarity of $0.210$, compared to the full-sample mean of $0.114$. More fundamentally, discussion on this video consists primarily of ironic humor regarding the ``rickroll'' cultural meme rather than policy, product, or governance deliberation, leaving a formal ``consensus'' estimand ill-defined.
+    \item \textbf{Statistical Indistinguishability:} Point estimates across estimators span a narrow range of $0.044$ (Unweighted $\mu = 0.114$, Heuristic $\mu = 0.123$, NC-IPS $\mu = 0.116$, PACE $\mu = 0.079$). All point estimates fall well within PACE's 95\% refitting bootstrap confidence interval ($[-0.03, 0.17]$). The permutation divergence test ($p = 0.36582$) indicates that the observed difference between PACE and the heuristic is statistically indistinguishable from null exchangeable noise.
+    \item \textbf{Sensitivity to Exposure-Baseline Calibration:} In contrast to ideal rank-order invariance, PACE's studentized residuals $\delta_i = L_i - \hat{\mathbb{E}}[L_i \mid r_i, \Delta t_i]$ depend non-linearly on baseline scale relative to the empirical MAD. Scaling the fitted baseline $\hat{\mathbb{E}}$ from $0.25\times$ to $2.0\times$ shifts PACE's estimate from $0.049$ to $0.082$, while a square-root distortion shifts it to $0.108$ (documented in `experiments/sensitivity_analysis.py`). The model is therefore sensitive to exposure specification.
+    \item \textbf{Temporal Compression and Degenerate Fit:} Because comments were retrieved 9--17 years after video upload, $\ln(1 + \Delta t)$ varies over a compressed range ($\approx 0.24$ standard deviations), forcing OLS into degenerate parameter regimes ($\alpha \approx 10^{71}, \lambda \approx 13$) and causing $54\%$ of total weight to concentrate on the 48 comments whose predicted baseline likes exceed observed counts by $>10\times$.
+    \item \textbf{Ranking Endogeneity:} Commercial platform relevance algorithms incorporate like counts into ranking decisions. Regressing likes onto display rank is therefore partially circular (endogenous), meaning the fitted baseline reflects an observational association rather than an exogenous counterfactual exposure curve.
 \end{itemize}
 
 \section{Limitations}
 \begin{enumerate}
-    \item \textbf{Proxy Exposure vs. True Impressions:} PACE relies on display rank and arrival delay as observable proxies for visual exposure. Platforms do not expose user impression counts, client viewport dwell times, or scroll depths via public APIs.
-    \item \textbf{Participant vs. Viewer Gap:} Our estimand reflects opinions among participating commenters. Extrapolating to the silent majority of non-commenting viewers requires external calibration against representative offline surveys \cite{zhao2026spiral}.
-    \item \textbf{Absence of Semantic Stance Decomposition:} The hierarchy damping factor $\phi^{d_i}$ accounts for tree depth geometrically, but does not parse rhetorical relationships (e.g., distinguishing between a supportive reply and an adversarial debunking) \cite{zubiaga2016stance}.
+    \item \textbf{Ranking Endogeneity vs. True Exposure:} PACE uses display rank as an observable proxy for visual exposure. However, platform recommendation algorithms utilize upvote counts to determine display rank, creating simultaneous endogeneity that violates strict exogeneity assumptions.
+    \item \textbf{Exposure Baseline Specification Sensitivity:} Residual standardization via MAD and sigmoidal gating is not invariant to baseline scale or functional form; misspecifying the exposure baseline can introduce non-trivial shifts in weighted consensus.
+    \item \textbf{Domain Mismatch and Rule-Based Lexicon Failures:} Rule-based sentiment lexicons (e.g., VADER) exhibit high zero-inflation (46\%) and fail on internet slang, irony, and meme culture. Accurate consensus estimation in informal discussion feeds requires domain-adapted language models evaluated against gold-standard human annotations.
+    \item \textbf{Participant vs. Viewer Selection Gap:} Our estimand measures consensus among active commenters. Silent viewers who never engage are systematically unobserved, requiring representative external polling to assess whole-population opinion \cite{zhao2026spiral}.
+    \item \textbf{Absence of Semantic Stance Decomposition:} The geometric hierarchy damping factor $\phi^{d_i}$ discounts reply depth uniformly, but does not distinguish between supportive affirmations and adversarial rebuttals in conversation trees \cite{zubiaga2016stance}.
 \end{enumerate}
 
 \section{Conclusion}
