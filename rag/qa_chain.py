@@ -55,7 +55,7 @@ class QAChain:
 
             except APIError as e:
                 if e.code in (429, 503) and attempt < 2:
-                    delay = 3 * (2 ** attempt)  # 3s, 6s
+                    delay = 15 * (attempt + 1)  # 15s, 30s — respects 5 RPM limit
                     logger.warning(f"QA retry {attempt+1}/3 in {delay}s (code {e.code})")
                     time.sleep(delay)
                 else:

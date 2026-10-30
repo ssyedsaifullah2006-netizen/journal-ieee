@@ -34,6 +34,10 @@ function toast(msg, type = 'ok') {
 
 function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function fmt(n) { return new Intl.NumberFormat().format(n || 0); }
+function safeMarkdown(text) {
+  const html = typeof marked !== 'undefined' ? marked.parse(text || '') : '<p>' + esc(text) + '</p>';
+  return typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(html) : esc(text).replace(/\n/g, '<br>');
+}
 
 function uid(prefix) { return prefix + '_' + (++chartCounter); }
 
@@ -193,7 +197,7 @@ function render(a, questions) {
 
   // Summary
   if (a.summary) {
-    const html = typeof marked !== 'undefined' ? marked.parse(a.summary) : '<p>' + esc(a.summary) + '</p>';
+    const html = safeMarkdown(a.summary);
     let s = `<div class="section"><h3>📋 Executive Summary</h3><div class="card">${html}</div>`;
     if (a.key_themes?.length)
       s += `<h4>Key Themes</h4><div class="tags">${a.key_themes.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>`;
@@ -208,44 +212,113 @@ function render(a, questions) {
   // Sentiment
   if (a.sentiment) {
     const { positive: p, negative: n, neutral: u } = a.sentiment;
-    const t = (p||0) + (n||0) + (u||0);
+    const t = a.sentiment.total || (p||0) + (n||0) + (u||0);
     const pf = v => t > 0 ? ((v/t)*100).toFixed(1) : '0';
-    const pid = uid('pie');
 
-    c.innerHTML += `<div class="section"><h3>📊 Sentiment Analysis</h3>
+    const w = a.weighted_sentiment || {};
+    const w_pos = ((w.positive || 0) * 100).toFixed(1);
+    const w_neg = ((w.negative || 0) * 100).toFixed(1);
+    const w_neu = ((w.neutral || 0) * 100).toFixed(1);
+
+    const rel = a.reliability_metric || {};
+    const flip = a.majority_flip_test || {};
+    const rob = a.robustness_analysis || {};
+
+    const pid = uid('pie');
+    const compId = uid('comp_bar');
+
+    let flipBadge = '';
+    if (flip.flip_detected) {
+      const sigColor = flip.is_significant ? '#ef4444' : '#eab308';
+      flipBadge = `<span class="badge" style="background:${sigColor}20; color:${sigColor}; border:1px solid ${sigColor}40;">
+        ⚠️ Majority Flip: ${flip.raw_majority?.toUpperCase()} → ${flip.weighted_majority?.toUpperCase()} (p=${flip.p_value})
+      </span>`;
+    } else {
+      flipBadge = `<span class="badge badge-green">✓ Stable Majority: ${flip.raw_majority?.toUpperCase() || 'ALIGNED'}</span>`;
+    }
+
+    const relColor = rel.reliability_level === 'HIGH' ? '#22c55e' : (rel.reliability_level === 'MODERATE' ? '#3b82f6' : '#f97316');
+    const relBadge = `<span class="badge" style="background:${relColor}20; color:${relColor}; border:1px solid ${relColor}40;">
+      Reliability R = ${rel.r_score || 0} (${rel.reliability_level || 'N/A'}, Gini=${rel.gini || 0})
+    </span>`;
+
+    const robBadge = `<span class="badge badge-gray">Robustness ρ = ${rob.robustness_score || 1.0} (${rob.verdict || 'OK'})</span>`;
+
+    c.innerHTML += `<div class="section">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3>📊 Engagement-Calibrated Sentiment Diagnostics</h3>
+      </div>
+
+      <div style="margin-bottom:14px; display:flex; gap:8px; flex-wrap:wrap;">
+        ${relBadge}
+        ${flipBadge}
+        ${robBadge}
+      </div>
+
+      <div class="card" style="margin-bottom:16px; font-size:12px; line-height:1.6; border-left:3px solid ${relColor};">
+        <strong>Diagnostic Summary:</strong> ${esc(flip.interpretation || '')} ${esc(rel.interpretation || '')}
+      </div>
+
       <div class="stats-row">
         <div class="stat-card">
           <span class="stat-value">${fmt(t)}</span>
-          <span class="stat-label">Analyzed</span>
+          <span class="stat-label">Total Comments</span>
         </div>
         <div class="stat-card stat-pos">
-          <span class="stat-value">${pf(p)}%</span>
-          <span class="stat-label">Positive</span>
+          <span class="stat-value">${pf(p)}% <span style="font-size:11px; opacity:0.8;">(→ ${w_pos}%)</span></span>
+          <span class="stat-label">Positive (Raw → Weighted)</span>
         </div>
         <div class="stat-card stat-neg">
-          <span class="stat-value">${pf(n)}%</span>
-          <span class="stat-label">Negative</span>
+          <span class="stat-value">${pf(n)}% <span style="font-size:11px; opacity:0.8;">(→ ${w_neg}%)</span></span>
+          <span class="stat-label">Negative (Raw → Weighted)</span>
         </div>
         <div class="stat-card stat-neu">
-          <span class="stat-value">${pf(u)}%</span>
-          <span class="stat-label">Neutral</span>
+          <span class="stat-value">${pf(u)}% <span style="font-size:11px; opacity:0.8;">(→ ${w_neu}%)</span></span>
+          <span class="stat-label">Neutral (Raw → Weighted)</span>
         </div>
       </div>
-      <div id="${pid}" class="chart-box"></div>
+
+      <div style="display:flex; gap:16px; flex-wrap:wrap;">
+        <div id="${pid}" class="chart-box" style="flex:1; min-width:280px;"></div>
+        <div id="${compId}" class="chart-box" style="flex:1; min-width:280px;"></div>
+      </div>
     </div>`;
 
     requestAnimationFrame(() => {
-      const el = document.getElementById(pid);
-      if (!el) return;
-      Plotly.newPlot(pid, [{
-        type:'pie', values:[p,n,u], labels:['Positive','Negative','Neutral'],
-        marker:{colors:['#22c55e','#ef4444','#6b7280']},
-        textinfo:'label+percent', textfont:{color:'#fff',size:13}, hole:0.45
-      }], {
-        paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
-        font:{color:'#a1a1aa',family:'Inter'}, margin:{l:20,r:20,t:10,b:10},
-        showlegend:false, height:280
-      }, {responsive:true, displayModeBar:false});
+      // 1. Raw Distribution Donut
+      const elPie = document.getElementById(pid);
+      if (elPie) {
+        Plotly.newPlot(pid, [{
+          type:'pie', values:[p,n,u], labels:['Positive','Negative','Neutral'],
+          marker:{colors:['#22c55e','#ef4444','#6b7280']},
+          textinfo:'label+percent', textfont:{color:'#fff',size:12}, hole:0.45
+        }], {
+          title:{text:'Raw Comment Distribution', font:{color:'#a1a1aa',size:12}},
+          paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+          font:{color:'#a1a1aa',family:'Inter'}, margin:{l:10,r:10,t:30,b:10},
+          showlegend:false, height:240
+        }, {responsive:true, displayModeBar:false});
+      }
+
+      // 2. Comparison Bar (Raw vs Weighted)
+      const elBar = document.getElementById(compId);
+      if (elBar) {
+        const rawVals = [parseFloat(pf(p)), parseFloat(pf(n)), parseFloat(pf(u))];
+        const weightVals = [parseFloat(w_pos), parseFloat(w_neg), parseFloat(w_neu)];
+        
+        Plotly.newPlot(compId, [
+          { name: 'Raw %', x: ['Positive', 'Negative', 'Neutral'], y: rawVals, type: 'bar', marker: {color: '#71717a'} },
+          { name: 'Weighted %', x: ['Positive', 'Negative', 'Neutral'], y: weightVals, type: 'bar', marker: {color: '#3b82f6'} }
+        ], {
+          title:{text:'Raw vs. Engagement-Weighted (%)', font:{color:'#a1a1aa',size:12}},
+          paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+          font:{color:'#a1a1aa',family:'Inter'},
+          barmode: 'group',
+          margin:{l:30,r:10,t:30,b:30},
+          height:240,
+          legend: {orientation:'h', y:-0.2, font:{size:11}}
+        }, {responsive:true, displayModeBar:false});
+      }
     });
   }
 
@@ -361,7 +434,7 @@ function addMsg(role, text, sources) {
   if (role === 'ai') head = `<div class="msg-head"><div class="avatar avatar-ai">AI</div><span class="muted" style="font-size:11px">Assistant</span></div>`;
 
   let body = '';
-  if (role === 'ai' && typeof marked !== 'undefined') body = marked.parse(text);
+  if (role === 'ai') body = safeMarkdown(text);
   else body = esc(text).replace(/\n/g, '<br>');
 
   let srcHtml = '';

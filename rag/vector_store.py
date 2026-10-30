@@ -48,6 +48,7 @@ class GeminiEmbeddingFunction(EmbeddingFunction):
         import time
         for attempt in range(max_retries):
             try:
+                # Single API call for the entire batch (embed_content supports lists)
                 res = client.models.embed_content(
                     model=config.GEMINI_EMBEDDING_MODEL,
                     contents=texts
@@ -57,7 +58,7 @@ class GeminiEmbeddingFunction(EmbeddingFunction):
                 error_msg = str(e).lower()
                 is_retriable = any(k in error_msg for k in ['429', 'rate', 'quota', '503', 'timeout', 'connection'])
                 if is_retriable and attempt < max_retries - 1:
-                    delay = 2 * (2 ** attempt)  # 2s, 4s
+                    delay = 20 * (2 ** attempt)  # 20s, 40s — matches API's suggested retry delay
                     logger.warning(f"Embedding retry {attempt+1}/{max_retries} in {delay}s: {e}")
                     time.sleep(delay)
                 else:
@@ -135,6 +136,9 @@ class VectorStore:
             )
         except Exception as e:
             logger.error(f"Error calculating embeddings: {e}")
+            # The caller owns RAG status. Swallowing this exception incorrectly
+            # marks an empty or partial index as ready.
+            raise
 
     def search(self, query: str, n_results: int = None, where: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Search the vector store. Uses config.RAG_TOP_K by default."""

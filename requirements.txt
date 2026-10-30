@@ -17,4 +17,6 @@ chromadb>=0.4.0
 # ─── Data Processing & Visualization ────────────────────────────
 pandas>=2.1.0
 numpy>=1.24.0
+scipy>=1.10.0
+nltk>=3.8.0
 plotly>=5.18.0

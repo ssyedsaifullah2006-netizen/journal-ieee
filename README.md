@@ -5,8 +5,8 @@ A web-based AI platform that fetches social media comments (YouTube, Reddit), ru
 ## Features
 
 - **Comment Fetching** — Paste a YouTube or Reddit URL to fetch up to 1000 comments via official APIs.
-- **Sentiment Analysis** — Classifies every comment as positive, negative, or neutral using a RoBERTa transformer model.
-- **Topic Modeling** — Automatically discovers discussion themes using BERTopic.
+- **Sentiment Analysis** — Classifies every comment locally with VADER and reports engagement-weighted descriptive diagnostics.
+- **Topic Summary** — Generates a structured topic summary with Gemini when configured; it falls back to a deterministic local summary when unavailable.
 - **Executive Summary** — Generates a structured summary with key themes, notable opinions, and controversies via Gemini.
 - **RAG Chat** — Ask natural-language questions about the comments. Uses ChromaDB vector search + Gemini to provide grounded answers with source citations.
 
@@ -16,9 +16,9 @@ A web-based AI platform that fetches social media comments (YouTube, Reddit), ru
 |-------|-----------|
 | Backend | FastAPI, Uvicorn |
 | Frontend | Vanilla HTML/CSS/JS, Plotly.js |
-| LLM | Google Gemini 3.6 Flash (via `google-genai` SDK) |
-| Sentiment | `cardiffnlp/twitter-roberta-base-sentiment-latest` (HuggingFace) |
-| Topics | BERTopic + SentenceTransformers |
+| LLM | Google Gemini (via `google-genai` SDK; model selected in `config.py`) |
+| Sentiment | NLTK VADER |
+| Topics | Gemini structured summary with deterministic fallback |
 | Vector DB | ChromaDB (persistent, local) |
 | Data Sources | YouTube Data API v3, Reddit (PRAW) |
 
@@ -49,6 +49,41 @@ A web-based AI platform that fetches social media comments (YouTube, Reddit), ru
     ├── charts.py              # Plotly chart generators
     └── topic_network.py       # Topic visualization
 ```
+
+## Research Paper: PACE Framework (IEEE Submission)
+
+This repository includes the complete research implementation, reproducibility benchmarks, and IEEE journal submission package for:
+
+**"Exposure-Conditioned Engagement Adjustment for Robust Consensus Estimation in Ranked Social Discussion Streams"**  
+*Author:* Sayed Saifullah (Vellore Institute of Technology, India)
+
+### Key Contributions & Novelty
+- **Preferential-Attachment Corrected Endorsement (PACE)**: Formulates expected engagement as an empirical function of display rank ($r_i$) and arrival delay ($\Delta t_i$).
+- **Duan's (1983) Smearing Calibration**: Corrects for retransformation bias under Jensen's inequality in log-linear engagement models.
+- **Organic Residual Gating**: Standardizes engagement residuals $\delta_i$ via Median Absolute Deviation (MAD) and applies sigmoidal bounding to curb single-comment weight domination.
+- **Auditable simulation study**: Benchmarked across deterministic $M=50$ Monte Carlo trials per scenario. The included YouTube CSV is an illustrative static semantic-analysis snapshot, not a verified causal or accuracy evaluation.
+
+### Quick Reproducibility Commands
+```bash
+# 1. Run all 50 Monte Carlo trials across Scenarios 1-3 & YouTube Case Study
+python experiments/reproduce_all_experiments.py
+
+# 2. Generate 300 DPI IEEE publication figures
+python experiments/generate_publication_figures.py
+```
+
+### Paper & Dataset Structure
+- `latex/paper.tex`: Full IEEE Transactions two-column manuscript.
+- `latex/references.bib`: BibTeX references; verify bibliographic metadata against publisher records before submission.
+- `latex_submission_package.zip`: Ready-to-upload Overleaf project zip.
+- `figures/`: 300 DPI publication figures (`fig1_monte_carlo_mae.png`, `fig2_ablation_study.png`, `fig3_weight_distributions.png`, `fig4_youtube_case_study.png`).
+- `data/monte_carlo_trial_level_results.csv`: 150 individual trial-level benchmark observations.
+- `data/ablation_trial_level_results.csv`: 150 individual trial-level ablation observations.
+- `data/replicated_benchmark_results.csv`: Benchmark summary table (Mean $\pm$ SE, Paired Wilcoxon $p$-values).
+- `data/replicated_ablation_results.csv`: Component ablation summary table.
+- `data/youtube_corpus_100_comments.csv`: Legacy illustrative YouTube snapshot. See its provenance manifest; regenerate it with `experiments/fetch_real_youtube_corpus.py` before making API-provenance claims.
+
+---
 
 ## Setup
 

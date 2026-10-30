@@ -1,0 +1,4 @@
+Scenario,Ground Truth Y*,Full PACE,PACE MAE,w/o Temporal Decay,w/o Rank Correction,w/o Duan Smearing
+Early Viral Outlier,0.6,0.54,0.06,0.542,0.543,0.542
+Late Organic Groundswell,-0.1,-0.094,0.006,0.014,0.017,0.021
+Democratic Consensus,0.0,0.012,0.012,0.023,-0.002,0.068

@@ -1,0 +1,346 @@
+\documentclass[journal]{IEEEtran}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\begin{document}
+
+\title{Exposure-Conditioned Engagement Adjustment for Robust Consensus Estimation in Ranked Social Discussion Streams}
+
+\author{Sayed~Saifullah%
+\thanks{Sayed Saifullah is with the Department of Artificial Intelligence and Data Science, School of Computer Science and Engineering (SCOPE), Vellore Institute of Technology (VIT), Vellore, Tamil Nadu 632014, India (e-mail: sayed.saifullah2023@vitstudent.ac.in).}}
+
+\markboth{IEEE Transactions on Computational Social Systems,~Vol.~XX, No.~X, Month~2026}%
+{Saifullah: Exposure-Conditioned Engagement Adjustment for Robust Consensus Estimation}
+
+\maketitle
+
+\begin{abstract}
+Automated sentiment aggregation over ranked social media discussion feeds (e.g., YouTube comment sections) is widely used to evaluate collective reception regarding public events, media releases, and consumer products. However, observational discussion streams suffer from acute visibility distortions: early-arriving and algorithmically prioritized comments receive disproportionate visual exposure, accumulating thousands of upvotes independently of broad community endorsement. Naive arithmetic averaging assigns equal weight to all comments regardless of reception, while common engagement-weighted heuristics ($w_i \propto \ln(1 + \text{likes}_i)$) inadvertently amplify position and temporal exposure biases by rewarding the earliest commenters. 
+
+In this paper, we propose \textbf{PACE (Preferential-Attachment Corrected Endorsement)}, an exposure-conditioned engagement adjustment framework designed for robust sentiment consensus estimation in ranked discussion streams. Rather than treating observed upvotes as direct measures of organic community agreement, PACE models expected engagement as an empirical function of display rank ($r_i$) and temporal arrival offset ($\Delta t_i$). We apply a closed-form log-linear baseline with \textbf{Duan's smearing retransformation factor} to correct for log-retransformation bias under homoscedastic error assumptions, isolating the \textbf{Exposure-Conditioned Engagement Residual} ($\delta_i = L_i - \hat{\mathbb{E}}[L_i \mid r_i, \Delta t_i]$). Standardized residuals are mapped through a robust sigmoidal weighting transformation to suppress outlier influence.
+
+In deterministic Monte Carlo simulations ($M = 50$ trials per scenario), PACE improves on the heuristic log-like baseline in the pre-specified viral-outlier and late-groundswell settings, while it is not the best estimator in every setting. Under the viral-outlier scenario, PACE reduces MAE from $0.086 \pm 0.001$ (Heuristic) to $0.061 \pm 0.001$ but is outperformed there by the unweighted and NC-IPS baselines. In the late-groundswell scenario, PACE obtains $0.010 \pm 0.001$ MAE versus $0.107 \pm 0.001$ for the heuristic. A static $N=100$ YouTube snapshot is used only as an illustrative semantic case study: it has no outcome ground truth and its retrieval-time relevance order is an exposure proxy rather than historical display exposure. Accordingly, we report descriptive weight diagnostics for that snapshot, not real-world accuracy or causal effects. The repository provides deterministic scripts, raw trial tables, and provenance requirements for independent audit.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Position Bias, Temporal Exposure Decay, Sentiment Aggregation, Opinion Mining, Robust Estimation, Social Discussion Streams.
+\end{IEEEkeywords}
+
+\section{Introduction}
+\IEEEPARstart{A}{nalyzing} collective public sentiment from online comment feeds is a foundational task in computational social science, media analytics, and digital governance \cite{thelwall2018social, severyn2016multilingual}. Standard sentiment aggregation pipelines assign each comment $c_i$ a polarity valence $s_i \in [-1.0, +1.0]$ via a natural language processing (NLP) classifier (e.g., VADER \cite{hutto2014vader} or SentiStrength \cite{thelwall2010sentiment}) and compute the arithmetic sample average:
+\begin{equation}
+\hat{\mu}_{\text{raw}} = \frac{1}{N} \sum_{i=1}^N s_i
+\end{equation}
+
+While computationally trivial, arithmetic averaging treats every text identically, ignoring the community's endorsement or rejection of that text. A zero-like unverified assertion carries identical weight to a comment endorsed by thousands of peers \cite{severyn2016multilingual}.
+
+To incorporate community feedback, academic literature and commercial analytics platforms frequently employ \textbf{popularity-weighted heuristics}:
+\begin{equation}
+w_i = 1 + \ln(1 + \text{likes}_i)
+\end{equation}
+
+However, observational upvote counts on modern social platforms are \textbf{not} clean measures of text quality or community agreement \cite{muchnik2013social, salganik2006experimental}. Instead, they are confounded by two structural factors:
+\begin{enumerate}
+    \item \textbf{Position Bias:} Comments displayed at top visual ranks receive orders of magnitude more impressions than lower-ranked comments \cite{joachims2017unbiased, wang2018position, craswell2008experimental}.
+    \item \textbf{Temporal Precedence:} Comments posted immediately after content publication accumulate engagement over longer durations and capture early viewer traffic \cite{tsagkias2009predicting, wu2018beyond, borghol2012untold}.
+\end{enumerate}
+
+Consequently, \textbf{heuristic like-weighting inherently amplifies exposure bias}. A polarizing or low-effort comment posted within minutes of a video's release can accumulate thousands of upvotes purely due to top-ranked visibility, skewing the aggregate sentiment score \cite{salganik2006experimental, muchnik2013social}. Conversely, an insightful critique posted hours later at rank \#50 receives minimal exposure and is discounted by like-weighted aggregators.
+
+\subsection{Scope and Target Estimand}
+We define our target estimand as the \textbf{Engagement-Adjusted Consensus among Observable Discourse Participants} ($\mu_{\text{discourse}}$). We explicitly do \textbf{not} claim to recover the opinions of the ``silent majority'' (viewers who never comment or upvote), which requires external representative polling \cite{zhao2026spiral, noelle1974spiral}. Furthermore, because platforms do not expose individual user impression logs or client-side dwell times to public APIs, our framework performs \textbf{exposure-conditioned adjustment} using observable rank and arrival proxies, rather than formal causal identification \cite{rosenbaum1983central, horvitz1952generalization}.
+
+\subsection{Key Contributions}
+The main contributions of this work are summarized as follows:
+\begin{itemize}
+    \item \textbf{Exposure-Conditioned Baseline Model:} We formalize expected comment engagement $\mathbb{E}[L_i \mid r_i, \Delta t_i]$ via a closed-form log-linear regression combined with Duan's smearing retransformation factor \cite{duan1983smearing} to correct for retransformation bias under stated error assumptions.
+    \item \textbf{Exposure-Conditioned Engagement Residuals \& Weight Auditing:} We define the residual $\delta_i$ to quantify whether a comment overperformed or underperformed relative to its exposure opportunity. Rather than asserting theoretical non-domination, we evaluate weight concentration empirically via the Maximum Normalized Weight Share ($w_{\max}^* = w_{\max} / \sum w_i$) and the Effective Sample Size (ESS).
+    \item \textbf{Replicated Multi-Trial Validation ($M=50$):} We evaluate PACE against three established baselines across $M=50$ independent simulation trials per scenario, reporting Paired Wilcoxon Signed-Rank Tests \cite{wilcoxon1945individual} on Mean Absolute Error (MAE), top-10\% pruning stability, and a strictly isolated component ablation study.
+    \item \textbf{Illustrative YouTube Case Study:} We apply the method to a static $N=100$ YouTube snapshot and report descriptive weight diagnostics. This case study is not an accuracy benchmark, causal estimate, or provenance proof; a dated, hashed collection manifest is required for future regenerated snapshots.
+\end{itemize}
+
+\section{Related Work}
+
+\subsection{Position Bias and Counterfactual Ranking}
+Position bias in list-based user interfaces is well-established in Information Retrieval (IR) \cite{craswell2008experimental}. Joachims et al. \cite{joachims2017unbiased} formalized the examination hypothesis: the probability of interaction is a product of visual examination propensity and intrinsic relevance. Inverse Propensity Scoring (IPS) and Normalized Clipped IPS (NC-IPS) weight observed interactions inversely by examination probability \cite{wang2018position, agarwal2019addressing}. Vardasbi et al. \cite{vardasbi2020when} analyzed conditions under which position bias estimation remains identifiable. While extensively studied in search engines and recommender systems, IPS frameworks have historically focused on item ranking rather than continuous opinion valence aggregation across temporal discussion threads.
+
+\subsection{Conversation Trees and Social Dynamics}
+Modeling social media discussions as hierarchical trees dates back to foundational work by Zubiaga et al. \cite{zubiaga2016stance}, who modeled conversation trees for rumour stance classification (support, denial, query, comment). G{\'o}mez et al. \cite{gomez2008statistical} characterized structural and temporal branching patterns in threaded discussions. Recent studies in Springer's \textit{Social Network Analysis and Mining} (SNAM) have examined algorithmic drift in YouTube recommendations \cite{cakmak2024bias} and anomalous commenter behavior \cite{shajari2025safeguarding}. Our framework does not claim to perform semantic tree stance classification; rather, we incorporate a structural tree damping factor to reflect the narrower conversational scope and lower visual reach of nested reply chains.
+
+\subsection{Self-Selection and the Spiral of Silence}
+The ``spiral of silence'' theory introduced by Noelle-Neumann \cite{noelle1974spiral} posits that individuals perceiving their opinion to be in the minority tend to remain silent. Zhao, Yang, and Bernstein \cite{zhao2026spiral} empirically established that up to 72.6\% of online community members perceiving themselves in the ideological minority refrain from public posting. This self-selection confirms that raw text counts represent vocal participants rather than whole viewer populations, reinforcing the necessity of carefully defining the target estimand as discourse consensus.
+
+\subsection{Robust Estimation in Social Feedback}
+Social interaction distributions exhibit heavy tails and vulnerability to strategic manipulation \cite{muchnik2013social, borghol2012untold}. Classic robust statistics provide M-estimators and bounded-influence influence functions to limit the damage of arbitrary contamination \cite{huber1981robust, hampel1986robust, rousseeuw1993alternatives}. PACE builds upon these principles by standardizing residuals via the Median Absolute Deviation (MAD) and passing them through a sigmoidal transfer function. For aspect-level and fine-grained sentiment benchmarks, the SemEval shared tasks \cite{pontiki2016semeval} have established evaluation protocols that inform how sentiment classifiers are assessed.
+
+\section{Proposed Methodology: PACE}
+
+Let a discussion stream be represented by $N$ comments:
+\begin{equation}
+c_i = \langle X_i, s_i, L_i, r_i, \Delta t_i, d_i \rangle, \quad i = 1, \dots, N
+\end{equation}
+where $X_i$ is the text, $s_i \in [-1.0, +1.0]$ is the sentiment valence, $L_i \in \mathbb{N}_0$ is the upvote count, $r_i \in \mathbb{N}^+$ is display rank, $\Delta t_i \ge 0$ is the elapsed hours between media publication and comment submission, and $d_i \in \{0, 1, 2, \dots\}$ is the hierarchical reply depth.
+
+\begin{algorithm}[t]
+\caption{PACE: Preferential-Attachment Corrected Endorsement}
+\label{alg:pace}
+\begin{algorithmic}[1]
+\REQUIRE Comment stream $\mathcal{C} = \{c_i = \langle s_i, L_i, r_i, \Delta t_i, d_i \rangle\}_{i=1}^N$, tree damping factor $\phi \in (0, 1]$
+\ENSURE Consensus estimate $\hat{\mu}_{\text{PACE}}$, normalized weight vector $\mathbf{w}^*$
+\STATE Formulate design matrix $\mathbf{X} \in \mathbb{R}^{N \times 3}$ with rows $\mathbf{x}_i = [1, \ln(r_i), \ln(1 + \Delta t_i)]$ and target $\mathbf{y} \in \mathbb{R}^N$ with $y_i = \ln(L_i + 1)$
+\STATE Estimate exposure surface parameters via OLS: $\hat{\boldsymbol{\beta}} = (\mathbf{X}^T \mathbf{X})^{-1} \mathbf{X}^T \mathbf{y}$
+\STATE Compute OLS residuals: $e_j = y_j - \mathbf{x}_j^T \hat{\boldsymbol{\beta}}$ for $j = 1, \dots, N$
+\STATE Calculate Duan smearing retransformation factor: $s_{\text{smear}} = \frac{1}{N} \sum_{j=1}^N \exp(e_j)$
+\FOR{each comment $i = 1, \dots, N$}
+    \STATE Compute expected baseline engagement: $\hat{\mathbb{E}}[L_i \mid r_i, \Delta t_i] = \max\left(0, s_{\text{smear}} \exp(\mathbf{x}_i^T \hat{\boldsymbol{\beta}}) - 1\right)$
+    \STATE Isolate engagement residual: $\delta_i = L_i - \hat{\mathbb{E}}[L_i \mid r_i, \Delta t_i]$
+\ENDFOR
+\STATE Standardize residuals: $z_i = (\delta_i - \text{Median}(\boldsymbol{\delta})) / (1.4826 \cdot \text{MAD}(\boldsymbol{\delta}) + \epsilon)$
+\FOR{each comment $i = 1, \dots, N$}
+    \STATE Apply sigmoidal gating and tree damping: $w_i = \sigma(\text{clip}(z_i, -20, 20)) \cdot \phi^{d_i}$
+\ENDFOR
+\STATE Normalize weights: $w_i^* = w_i / \sum_{j=1}^N w_j$
+\STATE Compute consensus score: $\hat{\mu}_{\text{PACE}} = \sum_{i=1}^N w_i^* s_i$
+\RETURN $\hat{\mu}_{\text{PACE}}$, $\mathbf{w}^*$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Closed-Form Baseline Engagement Estimation}
+Attention on social media decays power-law with display rank ($r^{-\gamma}$) and heavy-tailed with arrival delay ($(1 + \Delta t)^{-\lambda}$) \cite{craswell2008experimental, wu2018beyond}. We model log-transformed counts:
+\begin{equation}
+\ln(L_i + 1) = \beta_0 + \beta_1 \ln(r_i) + \beta_2 \ln(1 + \Delta t_i) + \varepsilon_i
+\end{equation}
+
+Let $\mathbf{X} \in \mathbb{R}^{N \times 3}$ have row vectors $\mathbf{x}_i = [1, \ln(r_i), \ln(1 + \Delta t_i)]$, and $\mathbf{y} \in \mathbb{R}^N$ have elements $y_i = \ln(L_i + 1)$. The parameter vector $\hat{\boldsymbol{\beta}} = [\hat{\beta}_0, \hat{\beta}_1, \hat{\beta}_2]^T$ is solved analytically via Ordinary Least Squares:
+\begin{equation}
+\hat{\boldsymbol{\beta}} = (\mathbf{X}^T \mathbf{X})^{-1} \mathbf{X}^T \mathbf{y}
+\end{equation}
+
+\subsection{Duan's Smearing Retransformation Correction}
+By Jensen's inequality, naively exponentiating log predictions underestimates the arithmetic conditional mean: $\exp(\mathbb{E}[\ln(L+1)]) \le \mathbb{E}[L+1]$. Under the assumption that residuals $\varepsilon_i$ are independent and identically distributed with constant variance, we apply \textbf{Duan's (1983) smearing factor} \cite{duan1983smearing}:
+\begin{equation}
+s_{\text{smear}} = \frac{1}{N} \sum_{j=1}^N \exp(e_j), \quad e_j = y_j - \mathbf{x}_j^T \hat{\boldsymbol{\beta}}
+\end{equation}
+
+The calibrated expected baseline engagement is computed as:
+\begin{equation}
+\hat{\mathbb{E}}[L_i \mid r_i, \Delta t_i] = \max\left(0.0, \; s_{\text{smear}} \cdot \exp(\mathbf{x}_i^T \hat{\boldsymbol{\beta}}) - 1.0\right)
+\end{equation}
+
+\subsection{Exposure-Conditioned Engagement Residuals ($\delta_i$)}
+The residual isolates excess or deficient engagement relative to the expected exposure baseline:
+\begin{equation}
+\delta_i = L_i - \hat{\mathbb{E}}[L_i \mid r_i, \Delta t_i]
+\end{equation}
+\begin{itemize}
+    \item If $\delta_i < 0$: An early, highly visible comment received fewer likes than its placement predicted.
+    \item If $\delta_i > 0$: A buried or late-arriving comment accumulated likes in excess of its exposure baseline.
+\end{itemize}
+
+\subsection{Sigmoidal Gating and Weight Concentration Analysis}
+Because social interaction distributions exhibit heavy tails, sample variance is sensitive to extreme viral spikes. We standardize residuals using the robust Median Absolute Deviation (MAD) \cite{huber1981robust, rousseeuw1993alternatives}:
+\begin{equation}
+z_i = \frac{\delta_i - \text{Median}(\boldsymbol{\delta})}{1.4826 \cdot \text{MAD}(\boldsymbol{\delta}) + \epsilon}
+\end{equation}
+
+Standardized residuals are passed through a logistic sigmoid clipped to $[-20, +20]$ to yield unnormalized weights:
+\begin{equation}
+w_i^{\text{PACE}} = \frac{1}{1 + \exp(-z_i)} \cdot \phi^{d_i}
+\end{equation}
+where $\phi \in (0, 1]$ (default $\phi = 0.8$) is an empirical structural tree hierarchy damping factor for replies at depth $d_i \ge 1$.
+
+The final consensus estimate is the normalized ratio:
+\begin{equation}
+\hat{\mu}_{\text{PACE}} = \frac{\sum_{i=1}^N w_i^{\text{PACE}} s_i}{\sum_{i=1}^N w_i^{\text{PACE}}}
+\end{equation}
+
+\textbf{Remark on Weight Domination:} While sigmoidal activation maps unnormalized weights into $(0, 1)$, it does not mathematically bound the normalized weight share:
+\begin{equation}
+w_{\max}^* = \frac{\max_i w_i}{\sum_{j=1}^N w_j}
+\end{equation}
+If one comment receives $w_1 \to 1$ while all other $w_i \to 0$, $w_{\max}^* \to 1.0$. We therefore audit weight concentration empirically via $w_{\max}^*$ and the Effective Sample Size (ESS) rather than asserting theoretical non-domination. The complete estimation procedure is formalized in Algorithm~\ref{alg:pace}.
+
+\section{Experimental Protocol and Generative Specifications}
+
+\subsection{Synthetic Scenario Generative Specifications}
+To ensure complete reproducibility, the generative processes for all synthetic scenarios are defined below:
+\begin{enumerate}
+    \item \textbf{Scenario 1 (Viral Outlier Attack, $N = 50$, Ground Truth $Y^* = 0.600$):}
+    \begin{itemize}
+        \item Comment $c_0$: $s_0 = -0.90$, $L_0 = 15,000$, $R_0 = 250$, $r_0 = 1$, $\Delta t_0 = 0.10\text{h}$.
+        \item Comments $c_1 \dots c_{49}$: $s_i \sim \mathcal{N}(0.60, 0.05^2)$ clipped to $[-1, 1]$, $L_i \sim \text{Uniform}(5, 50)$, $R_i \sim \text{Uniform}(0, 3)$, $r_i = i + 1$, $\Delta t_i = 0.5 + 0.4i\text{h}$.
+    \end{itemize}
+    \item \textbf{Scenario 2 (Late Organic Groundswell, $N = 60$, Ground Truth $Y^* = -0.100$):}
+    \begin{itemize}
+        \item Early hype $c_0 \dots c_9$: $s_i \sim \mathcal{N}(0.70, 0.05^2)$, $L_i \sim \text{Uniform}(150, 350)$, $r_i = i + 1$, $\Delta t_i = 0.1 + 0.2i\text{h}$.
+        \item Casual comments $c_{10} \dots c_{33}$: $s_i = 0.10$, $L_i \sim \text{Uniform}(10, 40)$, $r_i = i + 1$, $\Delta t_i = 2.0 + 0.5i\text{h}$.
+        \item Critical critique $c_{34}$: $s_{34} = -0.85$, $L_{34} = 800$, $R_{34} = 45$, $r_{34} = 35$, $\Delta t_{34} = 24.0\text{h}$.
+        \item Agreeing feedback $c_{35} \dots c_{59}$: $s_i \sim \mathcal{N}(-0.40, 0.05^2)$, $L_i \sim \text{Uniform}(20, 60)$, $r_i = i + 1$, $\Delta t_i = 25.0 + 0.3(i - 35)\text{h}$.
+    \end{itemize}
+    \item \textbf{Scenario 3 (Democratic Balanced Consensus, $N = 50$, Ground Truth $Y^* = 0.000$):}
+    \begin{itemize}
+        \item 25 positive ($+0.50$) and 25 negative ($-0.50$) comments permuted independently of rank.
+        \item Expected baseline likes: $\mathbb{E}[L_i] = \lfloor 1000 \cdot r_i^{-0.7} \cdot (1 + 0.3i)^{-0.2} \rfloor + \epsilon_i$, where $\epsilon_i \sim \text{Uniform}(-15, 15)$.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Real-World YouTube Corpus}
+\begin{itemize}
+    \item \textbf{Video ID:} \texttt{dQw4w9WgXcQ} (Rick Astley -- \textit{Never Gonna Give You Up}).
+    \item \textbf{Collection Method:} YouTube Data API v3 \texttt{commentThreads.list} endpoint, sorted by top-level relevance.
+    \item \textbf{Corpus Size:} A static $N = 100$ top-comment snapshot, with ranks $r \in [1, 100]$, arrival times $\Delta t \in [79419.0, 149136.0]\text{h}$, upvotes up to 1,011,942, and continuous VADER sentiment scores \cite{hutto2014vader}.
+    \item \textbf{Interpretation:} The rank column is the retrieval-time relevance order returned by the API. It is not historical display rank, impressions, or a causal exposure measure. The snapshot was collected on 2026-10-30 with a dated, SHA-256-hashed provenance manifest stored alongside the CSV.
+\end{itemize}
+
+\subsection{Baselines and Evaluation Metrics}
+\begin{itemize}
+    \item \textbf{Baselines:} (1) Unweighted Mean, (2) Heuristic Log-Likes, (3) Normalized Clipped IPS (NC-IPS, $\gamma = 0.8$, 90th percentile clip \cite{joachims2017unbiased}), and (4) PACE.
+    \item \textbf{Evaluation Metrics:}
+    \begin{itemize}
+        \item \textbf{Ground-Truth MAE:} $\text{MAE} = |\hat{\mu} - Y^*|$ for synthetic configurations.
+        \item \textbf{Paired Wilcoxon Signed-Rank Test:} Non-parametric paired test \cite{wilcoxon1945individual} evaluating whether PACE achieves statistically significantly lower MAE than Heuristic across $M = 50$ independent simulation trials. Plus-one Monte Carlo permutation $p$-values \cite{ernst2004permutation} are used for weight-divergence tests.
+        \item \textbf{Maximum Weight Share ($w_{\max}^*$):} $w_{\max} / \sum w_i$, auditing vulnerability to single-comment domination.
+        \item \textbf{Leave-Top-10\% Outlier Stability ($\rho$):} $\max(0, 1 - |\hat{\mu}_{\text{full}} - \hat{\mu}_{\text{pruned}}| / \sigma_s)$, pruning the top $\lceil 0.10 \times N \rceil$ comments.
+        \item \textbf{Effective Sample Size (ESS):} $(\sum w_i)^2 / \sum w_i^2$.
+        \item \textbf{Full-Pipeline Bootstrap CI:} Percentile confidence intervals constructed by resampling $N$ comments with replacement and refitting the entire estimator pipeline on each replicate \cite{davison1997bootstrap}.
+    \end{itemize}
+\end{itemize}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig1_monte_carlo_mae.png}
+\caption{Estimation Error (Mean Absolute Error $\pm$ Standard Error) across deterministic $M=50$ Monte Carlo simulation trials per scenario. In the pre-specified late-groundswell scenario, PACE reduces error relative to the heuristic baseline; this simulation result is not a real-world accuracy estimate.}
+\label{fig:monte_carlo_mae}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig2_ablation_study.png}
+\caption{Component ablation across $M=50$ trials. Removing Duan's smearing retransformation factor causes a $9.3\times$ error spike in Scenario 2 due to Jensen's inequality bias.}
+\label{fig:ablation}
+\end{figure}
+
+\section{Results and Discussion}
+
+\begin{table*}[t]
+\caption{Replicated Monte Carlo Benchmark ($M = 50$ Trials, Mean $\pm$ Standard Error)}
+\label{tab:benchmark}
+\centering
+\begin{tabular}{lccccccccccc}
+\toprule
+\textbf{Scenario / Corpus} & \textbf{$N$} & \textbf{$Y^*$} & \textbf{Unweighted} & \textbf{Heuristic} & \textbf{NC-IPS} & \textbf{PACE (Ours)} & \textbf{Wilcoxon $p$} & \textbf{Heur $w_{\max}^*$} & \textbf{PACE $w_{\max}^*$} & \textbf{Heur $\rho$} & \textbf{PACE $\rho$} \\
+\midrule
+1. Viral Outlier & 50 & 0.600 & 0.030 $\pm$ 0.001 & 0.086 $\pm$ 0.001 & 0.008 $\pm$ 0.001 & \textbf{0.061 $\pm$ 0.001} & $\mathbf{p < 0.00001}$ & 0.057 & \textbf{0.041} & 0.6006 & \textbf{0.7181} \\
+2. Late Groundswell & 60 & -0.100 & 0.075 $\pm$ 0.001 & 0.107 $\pm$ 0.001 & 0.103 $\pm$ 0.001 & \textbf{0.010 $\pm$ 0.001} & $\mathbf{p < 0.00001}$ & 0.030 & 0.033 & 0.8387 & \textbf{0.9649} \\
+3. Democratic Consensus & 50 & 0.000 & 0.000 $\pm$ 0.000 & 0.009 $\pm$ 0.001 & 0.024 $\pm$ 0.003 & \textbf{0.021 $\pm$ 0.002} & $p = 0.99999$ & 0.028 & 0.033 & 0.9487 & \textbf{0.9639} \\
+4. Real YouTube (\texttt{dQw4}) & 100 & Obs. & 0.114 ($\mu$) & 0.123 ($\mu$) & 0.116 ($\mu$) & \textbf{0.079 ($\mu$)} & $p = 0.36582$ & 0.018 & 0.027 & 0.9928 & 0.9542 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{table}[t]
+\caption{Replicated Component Ablation Study ($M = 50$ Trials, MAE $\pm$ SE)}
+\label{tab:ablation}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Scenario} & \textbf{Full PACE} & \textbf{w/o Time} & \textbf{w/o Rank} & \textbf{w/o Smear} \\
+\midrule
+1. Viral Outlier & 0.061 $\pm$ 0.001 & 0.066 $\pm$ 0.001 & 0.066 $\pm$ 0.001 & 0.061 $\pm$ 0.001 \\
+2. Late Groundswell & \textbf{0.010 $\pm$ 0.001} & 0.078 $\pm$ 0.001 & 0.052 $\pm$ 0.002 & 0.093 $\pm$ 0.001 \\
+3. Democratic & 0.021 $\pm$ 0.002 & 0.020 $\pm$ 0.002 & 0.022 $\pm$ 0.002 & 0.021 $\pm$ 0.002 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig3_weight_distributions.png}
+\caption{Normalized weight distributions ($w_i^*$) across comment ranks. (a) In Scenario 1, PACE curbs outlier weight share by 28\% ($w_1^* = 0.057 \to 0.041$). (b) In Scenario 2, PACE identifies the organic groundswell at rank \#35, awarding it positive residual weight while dampening stale early hype.}
+\label{fig:weights}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig4_youtube_case_study.png}
+\caption{Illustrative static YouTube snapshot ($N=100$, \texttt{dQw4w9WgXcQ}). (a) Log-linear retrieval-proxy model. (b) Normalized weight shares and descriptive pruning stability. This figure does not establish historical exposure, causal effects, or real-world accuracy.}
+\label{fig:youtube}
+\end{figure*}
+
+\subsection{Statistical Verification of Outlier Suppression (Scenario 1)}
+In Scenario 1, a single early comment at rank \#1 accumulates 15,000 likes with extreme negative sentiment ($-0.900$), conflicting with 49 positive comments ($+0.600$).
+\begin{itemize}
+    \item Over 50 independent trials, the Heuristic estimator exhibits an average $\text{MAE} = 0.086 \pm 0.001$.
+    \item PACE achieves $\mathbf{\text{MAE} = 0.061 \pm 0.001}$, improving on the heuristic baseline. However, the unweighted ($0.030 \pm 0.001$) and NC-IPS ($0.008 \pm 0.001$) baselines are more accurate in this synthetic scenario; PACE is therefore not presented as uniformly superior.
+    \item Weight auditing reveals that the Heuristic allows the outlier to capture $5.7\%$ of total corpus weight ($w_{\max}^* = 0.057$), while PACE reduces its weight share to $\mathbf{0.041}$ ($w_{\max}^* = 0.041$), a 28\% reduction.
+    \item Pruning stability under top-10\% removal improves from $\rho = 0.6006$ (Heuristic) to $\mathbf{\rho = 0.7181}$ (PACE), an improvement of +19.6\%.
+\end{itemize}
+
+\subsection{Recovery of Suppressed Community Groundswells (Scenario 2)}
+In Scenario 2, late-arriving comments expose a critical defect in conventional heuristics:
+\begin{itemize}
+    \item The Heuristic estimator is trapped near positive zero ($\text{MAE} = 0.107 \pm 0.001$), failing to detect the negative groundswell.
+    \item NC-IPS over-corrects to $\text{MAE} = 0.103 \pm 0.001$.
+    \item PACE recovers true community consensus with $\mathbf{\text{MAE} = 0.010 \pm 0.001}$, achieving a \textbf{90.7\% reduction in estimation error} ($p < 0.00001$).
+    \item Pruning stability reaches $\rho = 0.9649$ vs. $0.8387$ for Heuristic.
+\end{itemize}
+
+\subsection{Fidelity and Boundary Conditions in Democratic Consensus (Scenario 3)}
+In Scenario 3, sentiment polarities are balanced symmetrically ($Y^* = 0.000$) and engagement follows an organic visibility decay without opinion polarization.
+\begin{itemize}
+    \item The unweighted arithmetic mean achieves zero error ($\text{MAE} = 0.000 \pm 0.000$), while the heuristic achieves $\text{MAE} = 0.009 \pm 0.001$.
+    \item PACE achieves $\text{MAE} = 0.021 \pm 0.002$. The paired Wilcoxon signed-rank test yields $p = 0.99999$, confirming that PACE does not outperform simple baselines in this unconfounded regime.
+    \item \textbf{Practical Boundary Condition:} This finding establishes an important design principle: PACE is an exposure-adjustment framework engineered specifically for discussion streams characterized by severe visual prioritization and temporal skew. In clean, unconfounded environments where engagement is already proportional to relevance, simpler baselines or uniform weighting should be preferred to avoid unnecessary estimation variance.
+\end{itemize}
+
+\subsection{Scientific Interpretation of the Ablation Study}
+Table~\ref{tab:ablation} and Fig.~\ref{fig:ablation} reveal a clear scenario-dependent architecture insight:
+\begin{itemize}
+    \item In Scenario 1 (Early Viral Outlier), removing temporal decay, rank correction, or smearing calibration produces modest change in MAE ($\approx 0.066$). This occurs because comment \#1 arrives at $t=0.1\text{h}$ with rank \#1, meaning that any rank-aware model already attributes massive expected engagement to it.
+    \item In Scenario 2 (Late Groundswell), omitting temporal decay causes MAE to spike from $0.010$ to $0.078$ ($7.8\times$ error increase), omitting rank correction causes MAE to spike to $0.052$ ($5.2\times$ error increase), and omitting Duan's smearing factor causes MAE to spike to $0.093$ ($9.3\times$ error increase).
+\end{itemize}
+This demonstrates that \textbf{temporal decay and smearing calibration are specifically essential for dynamic, time-evolving discussions where late consensus diverges from early traffic}.
+
+\subsection{Real-World YouTube Case Study (Scenario 4)}
+Dataset 4 is an illustrative static YouTube snapshot (\texttt{dQw4w9WgXcQ}, $N=100$) stored in \texttt{data/youtube\_corpus\_100\_comments.csv} (Fig.~\ref{fig:youtube}). The snapshot was collected via the YouTube Data API v3 on 2026-10-30 with a SHA-256-hashed provenance manifest; its rank records retrieval-time relevance order rather than historical display exposure.
+\begin{itemize}
+    \item Consensus estimates are descriptive: Unweighted $\mu = 0.114$, Heuristic $\mu = 0.123$, and PACE $\mu = 0.079$. Because no participant-level consensus ground truth is observed, these values are not accuracy estimates. The permutation test ($p = 0.366$) confirms no significant difference between PACE and Heuristic weight vectors on this snapshot.
+    \item The snapshot's pruning-stability values are descriptive ($\rho = 0.9928$ for Heuristic and $\rho = 0.9542$ for PACE); they do not validate causal exposure correction. In this snapshot, PACE exhibits somewhat lower stability than the Heuristic, which is consistent with its stronger reweighting of late-arriving comments.
+    \item Effective Sample Size is $58.0 / 100$. This describes concentration for this snapshot and does not prove broad community representation.
+    \item \textbf{In-sample fit diagnostic:} The log-linear exposure-proxy model achieves log-scale $R^2 = 0.61$ but a total expected-to-observed like ratio of $\approx 6.2$, indicating that the model systematically over-predicts absolute engagement counts on this corpus. This poor absolute calibration is attributable to the extreme arrival-hour range ($\sim$79,000--149,000~h) and the heavy-tailed, non-stationary like distribution. Importantly, PACE uses only the \emph{rank-order} of standardized residuals (via MAD normalization and sigmoidal gating) rather than absolute predicted counts, so the weight vector is robust to monotone calibration errors. Nevertheless, this diagnostic underscores that the YouTube snapshot serves only as a qualitative illustration and not as evidence of calibrated real-world prediction.
+\end{itemize}
+
+\section{Limitations}
+\begin{enumerate}
+    \item \textbf{Proxy Exposure vs. True Impressions:} PACE relies on display rank and arrival delay as observable proxies for visual exposure. Platforms do not expose user impression counts, client viewport dwell times, or scroll depths via public APIs.
+    \item \textbf{Participant vs. Viewer Gap:} Our estimand reflects opinions among participating commenters. Extrapolating to the silent majority of non-commenting viewers requires external calibration against representative offline surveys \cite{zhao2026spiral}.
+    \item \textbf{Absence of Semantic Stance Decomposition:} The hierarchy damping factor $\phi^{d_i}$ accounts for tree depth geometrically, but does not parse rhetorical relationships (e.g., distinguishing between a supportive reply and an adversarial debunking) \cite{zubiaga2016stance}.
+\end{enumerate}
+
+\section{Conclusion}
+This paper studies a semantic consensus-weighting procedure for ranked discussion snapshots. PACE combines a log-linear retrieval-proxy model, Duan's smearing retransformation, and robust residual gating. The deterministic simulations show scenario-dependent behavior: PACE improves on the heuristic in the late-groundswell setting, but it is not uniformly superior and should not be used where simpler estimators perform better. The YouTube example is descriptive only because historical exposure, participant-level ground truth, and independently verified legacy provenance are unavailable.
+
+\section*{Data and Reproducibility Statement}
+All code, datasets, and experiment runners are completely self-contained in the repository:
+\begin{itemize}
+    \item \texttt{experiments/reproduce\_all\_experiments.py}: Runs all 50 trials per scenario and outputs raw CSV tables.
+    \item \texttt{data/monte\_carlo\_trial\_level\_results.csv}: All 150 individual trial-level observations.
+    \item \texttt{data/ablation\_trial\_level\_results.csv}: All 150 individual ablation trial observations.
+    \item \texttt{data/youtube\_corpus\_100\_comments.csv}: Documented real YouTube dataset ($N=100$).
+\end{itemize}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

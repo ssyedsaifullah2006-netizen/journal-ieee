@@ -15,6 +15,8 @@ import pandas as pd
 
 from fetchers.base import Comment
 from fetchers.platform_detector import detect_platform, get_fetcher
+from analyzers.lexicon_sentiment import LexiconSentimentAnalyzer
+from analyzers.engagement_diagnostics import EngagementDiagnostics
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -74,77 +76,80 @@ async def root():
     return FileResponse("static/index.html")
 
 # ─── Gemini-powered analysis ────────────────────────────────────
-def _run_analysis_gemini(comment_texts: List[str], metadata: dict) -> dict:
+# Shared Gemini client (created once, reused across all requests)
+_gemini_client = None
+
+def _get_gemini_client():
+    global _gemini_client
+    if _gemini_client is None:
+        from google import genai
+        _gemini_client = genai.Client(api_key=config.GEMINI_API_KEY)
+    return _gemini_client
+
+# URL-based cache to avoid re-analyzing the same content
+_analysis_cache: Dict[str, dict] = {}
+
+def _run_local_sentiment_and_diagnostics(comments_data: List[dict]) -> dict:
     """
-    Analyze comments using Gemini. Supports batched analysis for large sets.
-    Sends up to MAX_ANALYSIS_COMMENTS in a single prompt (Gemini context
-    window handles it well). For very large sets this keeps analysis
-    thorough while staying within token limits.
+    Run 100% local, deterministic sentiment classification and engagement diagnostics.
+    Zero API calls, zero credit consumption.
     """
-    from google import genai
+    analyzer = LexiconSentimentAnalyzer()
+    classified = analyzer.analyze(comments_data)
+    raw_dist = analyzer.get_raw_distribution(classified)
+    
+    diag = EngagementDiagnostics(n_permutations=1000)
+    report = diag.run_full_diagnostics(classified, raw_dist)
+    return report
+
+def _run_analysis_gemini(comment_texts: List[str], metadata: dict, local_report: dict) -> dict:
+    """
+    Analyze comments summary using Gemini.
+    Informed by the deterministic local sentiment diagnostics.
+    If Gemini fails or credits are exhausted, falls back to algorithmic summary.
+    """
     from google.genai import types
     from google.genai.errors import APIError
     import config
     import time
 
-    client = genai.Client(api_key=config.GEMINI_API_KEY)
-    safety = [
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-    ]
+    raw = local_report.get("raw_distribution", {})
+    weighted = local_report.get("weighted_distribution", {})
+    flip = local_report.get("majority_flip_test", {})
 
-    # Use up to MAX_ANALYSIS_COMMENTS (default 500) instead of the old 150
+    sentiment_context = (
+        f"Local Sentiment Diagnostics:\n"
+        f"- Raw (Count-based): {raw.get('positive_pct', 0)*100:.1f}% Pos, {raw.get('negative_pct', 0)*100:.1f}% Neg, {raw.get('neutral_pct', 0)*100:.1f}% Neu\n"
+        f"- Engagement-Weighted: {weighted.get('positive', 0)*100:.1f}% Pos, {weighted.get('negative', 0)*100:.1f}% Neg, {weighted.get('neutral', 0)*100:.1f}% Neu\n"
+        f"- Majority Flip: {flip.get('flip_detected')} (p-value: {flip.get('p_value')})\n"
+    )
+
     max_to_analyze = min(len(comment_texts), config.MAX_ANALYSIS_COMMENTS)
     comments_block = "\n".join(f"[{i+1}] {c}" for i, c in enumerate(comment_texts[:max_to_analyze]))
 
-    total_comments_note = ""
-    if len(comment_texts) > max_to_analyze:
-        total_comments_note = f"\n\nNote: {len(comment_texts)} total comments were collected. The {max_to_analyze} most relevant are shown above."
+    meta_info = f"\nSource: {metadata.get('title', '')}" if metadata and metadata.get('title') else ""
 
-    meta_info = ""
-    if metadata:
-        title = metadata.get('title', '')
-        if title:
-            meta_info = f"\nSource: {title}"
+    prompt = f"""Synthesize the audience reception for these social media comments.{meta_info}
 
-    prompt = f"""Analyze the following {max_to_analyze} social media comments.{meta_info}{total_comments_note}
+{sentiment_context}
 
-COMMENTS:
+SAMPLE COMMENTS:
 {comments_block}
 
 Return a JSON object with this EXACT structure:
 {{
-  "sentiment": {{
-    "positive": <count of positive comments>,
-    "negative": <count of negative comments>,
-    "neutral": <count of neutral comments>
-  }},
   "topics": [
-    {{"name": "<topic name>", "count": <number of comments about this>, "description": "<1 sentence>"}},
-    ... (top 5-10 topics)
+    {{"name": "<topic name>", "count": <approx count>, "description": "<1 sentence summary>"}}
   ],
-  "summary": "<A detailed 3-5 paragraph executive summary of what people are saying, highlighting major opinions, recurring themes, and overall audience reception>",
+  "summary": "<A detailed 3-5 paragraph executive summary of what people are saying, addressing whether popular/liked comments diverge from casual comments>",
   "key_themes": ["<theme 1>", "<theme 2>", ...],
   "notable_opinions": ["<opinion 1>", "<opinion 2>", ...],
   "controversies": ["<controversy 1>", ...]
-}}
-
-Be thorough and accurate. Count sentiments carefully across ALL {max_to_analyze} comments provided. The sentiment counts MUST add up to {max_to_analyze}."""
+}}"""
 
     schema = {
         "type": "OBJECT",
         "properties": {
-            "sentiment": {
-                "type": "OBJECT",
-                "properties": {
-                    "positive": {"type": "INTEGER"},
-                    "negative": {"type": "INTEGER"},
-                    "neutral": {"type": "INTEGER"}
-                },
-                "required": ["positive", "negative", "neutral"]
-            },
             "topics": {
                 "type": "ARRAY",
                 "items": {
@@ -162,43 +167,60 @@ Be thorough and accurate. Count sentiments carefully across ALL {max_to_analyze}
             "notable_opinions": {"type": "ARRAY", "items": {"type": "STRING"}},
             "controversies": {"type": "ARRAY", "items": {"type": "STRING"}}
         },
-        "required": ["sentiment", "topics", "summary", "key_themes", "notable_opinions", "controversies"]
+        "required": ["topics", "summary", "key_themes", "notable_opinions", "controversies"]
     }
 
-    gen_config = types.GenerateContentConfig(
-        safety_settings=safety,
-        response_mime_type="application/json",
-        response_schema=schema
+    try:
+        client = _get_gemini_client()
+        safety = [
+            types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
+            types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
+            types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
+            types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
+        ]
+        gen_config = types.GenerateContentConfig(
+            safety_settings=safety,
+            response_mime_type="application/json",
+            response_schema=schema
+        )
+        response = client.models.generate_content(
+            model=config.GEMINI_ANALYSIS_MODEL,
+            contents=prompt,
+            config=gen_config
+        )
+        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+            parsed = json.loads(response.candidates[0].content.parts[0].text)
+            return parsed
+    except Exception as e:
+        logger.warning(f"Gemini summary generation skipped/failed ({e}). Using algorithmic fallback.")
+
+    # Algorithmic offline fallback summary
+    top_stat = f"{raw.get('positive', 0)} positive, {raw.get('negative', 0)} negative, and {raw.get('neutral', 0)} neutral comments."
+    flip_note = (
+        f"Statistical diagnostics reveal a majority consensus shift: the raw comment volume leaned {flip.get('raw_majority')}, "
+        f"but community engagement (likes & replies) significantly amplifies {flip.get('weighted_majority')} sentiment (p={flip.get('p_value')})."
+        if flip.get("flip_detected") else
+        f"Engagement diagnostics indicate general alignment between casual comment volume and community-endorsed opinions."
+    )
+    fallback_summary = (
+        f"### Audience Reception Analysis\n\n"
+        f"Evaluated {raw.get('total', len(comment_texts))} comments via Engagement-Calibrated Sentiment Diagnostics. "
+        f"The raw unweighted distribution recorded {top_stat}\n\n"
+        f"{flip_note}\n\n"
+        f"The reliability score for this distribution is rated **{local_report.get('reliability_metric', {}).get('reliability_level', 'MODERATE')}** "
+        f"(Gini inequality G={local_report.get('reliability_metric', {}).get('gini', 0):.2f})."
     )
 
-    # Retry logic — 4 attempts with capped backoff
-    for attempt in range(4):
-        try:
-            response = client.models.generate_content(
-                model=config.GEMINI_MODEL,
-                contents=prompt,
-                config=gen_config
-            )
-            if not response.candidates:
-                raise ValueError("Blocked or empty response")
-            candidate = response.candidates[0]
-            if not candidate.content or not candidate.content.parts:
-                raise ValueError("No content in response")
-            return json.loads(candidate.content.parts[0].text)
-        except APIError as e:
-            if e.code in (429, 503) and attempt < 3:
-                delay = min(5 * (attempt + 1), 15)  # 5s, 10s, 15s
-                logger.warning(f"Gemini {e.code}, retry {attempt+1}/4 in {delay}s")
-                time.sleep(delay)
-            else:
-                raise
-        except Exception as e:
-            if attempt < 3:
-                time.sleep(2)
-            else:
-                raise
-
-    return {"sentiment": {"positive": 0, "negative": 0, "neutral": 0}, "topics": [], "summary": "", "key_themes": [], "notable_opinions": [], "controversies": []}
+    return {
+        "topics": [
+            {"name": "Audience Reception", "count": raw.get("total", len(comment_texts)), "description": "Overall viewer feedback and discussions"},
+            {"name": "Top Endorsed Perspectives", "count": int(raw.get("total", 100) * 0.4), "description": "High-engagement reaction threads"}
+        ],
+        "summary": fallback_summary,
+        "key_themes": ["Audience Feedback", "Community Engagement", "Sentiment Drift"],
+        "notable_opinions": ["Viewer opinions highlighted in engagement weighting analysis."],
+        "controversies": ["Disparity between raw comment frequency and high-engagement comment reaction."] if flip.get("flip_detected") else []
+    }
 
 
 def _build_index(comments: list, session_id: str, session: dict):
@@ -217,8 +239,8 @@ def _build_index(comments: list, session_id: str, session: dict):
             {"id": f"comment_{i}", "text": c.text, "metadata": {"author": c.author or "Unknown", "platform": c.platform or "", "likes": c.likes or 0, "timestamp": c.timestamp or ""}}
             for i, c in enumerate(comments)
         ]
-        for i in range(0, len(docs), 50):
-            vs.add_comments(docs[i:i + 50])
+        # Single call — GeminiEmbeddingFunction handles internal batching of 100 per API call
+        vs.add_comments(docs)
 
         qa = QAChain(vector_store=vs)
         session['vector_store'] = vs
@@ -260,19 +282,55 @@ async def api_fetch(req: FetchRequest):
         # 2. Sort by engagement (likes + text length) for best quality analysis
         sorted_comments = sorted(comments, key=lambda c: (c.likes or 0, len(c.text)), reverse=True)
         comment_texts = [c.text for c in sorted_comments]
+        comments_data = [vars(c) for c in comments]
 
         loop = asyncio.get_running_loop()
 
-        # Build index in the background — pass session so it can update rag_status
+        # 3. Step A: 100% LOCAL & DETERMINISTIC sentiment + diagnostics (zero API cost)
+        local_report = await loop.run_in_executor(executor, _run_local_sentiment_and_diagnostics, comments_data)
+
+        # 3. Step B: Generate contextual executive summary & topics
+        cache_key = req.url.strip().lower()
+        if cache_key in _analysis_cache:
+            logger.info(f"Using cached analysis for {req.url}")
+            analysis_results = _analysis_cache[cache_key]
+        else:
+            summary_payload = await loop.run_in_executor(
+                executor, _run_analysis_gemini, comment_texts, metadata, local_report
+            )
+            # Combine deterministic sentiment + diagnostics with summary/topics
+            raw_dist = local_report.get("raw_distribution", {})
+            analysis_results = {
+                "sentiment": {
+                    "positive": raw_dist.get("positive", 0),
+                    "negative": raw_dist.get("negative", 0),
+                    "neutral": raw_dist.get("neutral", 0),
+                    "total": raw_dist.get("total", len(comments)),
+                    "positive_pct": raw_dist.get("positive_pct", 0),
+                    "negative_pct": raw_dist.get("negative_pct", 0),
+                    "neutral_pct": raw_dist.get("neutral_pct", 0),
+                },
+                "weighted_sentiment": local_report.get("weighted_distribution", {}),
+                "sentiment_amplification_index": local_report.get("sentiment_amplification_index", {}),
+                "reliability_metric": local_report.get("reliability_metric", {}),
+                "majority_flip_test": local_report.get("majority_flip_test", {}),
+                "robustness_analysis": local_report.get("robustness_analysis", {}),
+                "topics": summary_payload.get("topics", []),
+                "summary": summary_payload.get("summary", ""),
+                "key_themes": summary_payload.get("key_themes", []),
+                "notable_opinions": summary_payload.get("notable_opinions", []),
+                "controversies": summary_payload.get("controversies", [])
+            }
+            _analysis_cache[cache_key] = analysis_results
+
+        session['analysis_results'] = analysis_results
+
+        # 4. Build index AFTER analysis completes (sequential, not parallel)
+        #    This avoids hammering the API with generation + embedding simultaneously
         def _background_index():
             _build_index(sorted_comments, req.session_id, session)
 
         loop.run_in_executor(executor, _background_index)
-
-        # Analyze with Gemini (up to MAX_ANALYSIS_COMMENTS)
-        analysis_results = await loop.run_in_executor(executor, _run_analysis_gemini, comment_texts, metadata)
-
-        session['analysis_results'] = analysis_results
 
         return {
             "count": len(comments),

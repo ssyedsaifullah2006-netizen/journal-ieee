@@ -36,7 +36,11 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 #   "gemini-2.5-flash"       — newest flash,       FREE: 10 RPM (if available)
 #
 # If you're hitting daily limits, switch to "gemini-2.0-flash" or "gemini-2.0-flash-lite"
-GEMINI_MODEL = "gemini-3.5-flash-lite"
+GEMINI_MODEL = "gemini-3.8-flash"
+
+# Gemini model used for bulk analysis (sentiment, topics, summary).
+# Flash Lite has 500 RPD vs Flash's 20 RPD — 25× more headroom for batch work.
+GEMINI_ANALYSIS_MODEL = "gemini-3.5-flash-lite"
 
 # Gemini embedding model used for RAG vector search.
 # Available on your API key:

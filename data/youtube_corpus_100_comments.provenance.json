@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "source_platform": "YouTube Data API v3",
+  "video_id": "dQw4w9WgXcQ",
+  "retrieved_at_utc": "2026-10-30T07:09:54.695650+00:00",
+  "collection_method": "youtube.commentThreads.list(order=relevance, top-level comments only)",
+  "ranking_interpretation": "retrieval-time relevance order returned by the API; it is not a historical display-rank or impression measurement",
+  "comment_scope": "top-level comments only",
+  "requested_comment_count": 100,
+  "returned_comment_count": 100,
+  "video_publish_time_utc": "2009-10-25T06:57:33+00:00",
+  "sentiment_method": "NLTK VADER compound score; thresholds +/-0.05",
+  "csv_file": "youtube_corpus_100_comments.csv",
+  "csv_sha256": "8a019bac959b7eac48d3c7dc62a9bf7f816b5bb467cbacfe1384bf12b44acb7a",
+  "post_processing": "2 NaN text entries replaced with placeholder '[non-text or emoji-only comment]'"
+}
