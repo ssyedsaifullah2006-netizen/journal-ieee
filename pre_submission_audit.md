@@ -1,6 +1,6 @@
 # Pre-Submission Evidence Gate: PACE Manuscript Audit
 
-**Current status: AUDITED AND VERIFIED FOR JOURNAL SUBMISSION (Diagnostic & Audit Framing).**
+**Current status: manuscript compiles cleanly, all numbers reproduce, 21/21 automated checks pass.** Manual items still required before submission: confirm the 72.1% figure and the Cakmak (2024) and Shajari (2025) DOIs against the publishers, and check the target journal's current template and author guidelines.
 
 This document tracks empirical verification gates, methodology disclosures, and provenance requirements for the manuscript. Following the strategic pivot to an **Audit and Diagnostic Framework for Exposure-Conditioned Sentiment Consensus**, all observational limits, lexicon degradation, baseline sensitivity, and ranking endogeneity are formally reported as primary scientific contributions.
 

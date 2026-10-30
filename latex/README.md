@@ -1,7 +1,7 @@
 # PACE IEEE Journal Submission Package
 
 This folder contains the complete, compilable IEEE journal manuscript package for:
-**"Exposure-Conditioned Engagement Adjustment for Robust Consensus Estimation in Ranked Social Discussion Streams"**
+**"Exposure-Conditioned Consensus Estimation in Ranked Social Discussion Streams: Sensitivity, Endogeneity, and Empirical Auditing"**
 Author: **Sayed Saifullah** (Vellore Institute of Technology, India)
 
 ---

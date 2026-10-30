@@ -61,7 +61,7 @@ A web-based AI platform that fetches social media comments (YouTube, Reddit), ru
 
 This repository includes the complete research implementation, reproducibility benchmarks, and IEEE journal submission package for:
 
-**"Exposure-Conditioned Engagement Adjustment for Robust Consensus Estimation in Ranked Social Discussion Streams"**  
+**"Exposure-Conditioned Consensus Estimation in Ranked Social Discussion Streams: Sensitivity, Endogeneity, and Empirical Auditing"**  
 *Author:* Sayed Saifullah (Vellore Institute of Technology, India)
 
 ### Key Contributions & Novelty
