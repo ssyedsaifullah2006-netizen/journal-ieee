@@ -87,7 +87,7 @@ python experiments/run_exhaustive_verification.py
 
 ### Paper & Dataset Structure
 - `latex/paper.tex`: Full IEEE Transactions two-column manuscript.
-- `latex/references.bib`: 30 peer-reviewed references with verified metadata.
+- `latex/references.bib`: 30 bibliographic references (including monographs, peer-reviewed conference/journal proceedings, and preprints).
 - `latex_submission_package.zip`: Ready-to-upload Overleaf project zip.
 - `figures/`: 300 DPI publication figures (`fig1`–`fig4`).
 - `data/monte_carlo_trial_level_results.csv`: 150 individual trial-level benchmark observations.
@@ -97,6 +97,8 @@ python experiments/run_exhaustive_verification.py
 - `data/sensitivity_ground_truth_results.csv`: Target estimand sensitivity across continuous $Y^*$ definitions.
 - `data/sensitivity_baseline_distortion_results.csv`: Empirical evaluation of PACE under baseline scale/distortion.
 - `data/youtube_corpus_100_comments.csv`: 100 genuine YouTube API comments fetched on 2026-10-30 with dated SHA-256 provenance manifest (`.provenance.json`).
+- `data/youtube_corpus_100_comments_human_labeled.csv`: Gold-standard human-annotated sentiment audit for all 100 comments.
+- `experiments/evaluate_vader_accuracy.py`: Rigorous validation script evaluating VADER against human ground truth.
 
 ---
 

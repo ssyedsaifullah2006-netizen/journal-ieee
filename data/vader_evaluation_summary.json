@@ -1,0 +1,41 @@
+{
+  "sample_size": 100,
+  "accuracy": 0.65,
+  "macro_f1": 0.5307114602340619,
+  "zero_inflation_count": 46,
+  "zero_inflation_pct": 0.46,
+  "true_distribution": {
+    "neutral": 51,
+    "positive": 46,
+    "negative": 3
+  },
+  "vader_distribution": {
+    "neutral": 47,
+    "positive": 37,
+    "negative": 16
+  },
+  "confusion_matrix": [
+    [
+      26,
+      9,
+      11
+    ],
+    [
+      11,
+      37,
+      3
+    ],
+    [
+      0,
+      1,
+      2
+    ]
+  ],
+  "labels": [
+    "positive",
+    "neutral",
+    "negative"
+  ],
+  "pos_misclassified_as_neg": 11,
+  "pos_misclassified_as_neu": 9
+}

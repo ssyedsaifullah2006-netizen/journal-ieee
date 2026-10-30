@@ -181,6 +181,21 @@ class ExhaustiveVerifier:
         except LookupError:
             self.record_warn("YouTube semantic labels", "NLTK VADER lexicon is unavailable; semantic scores were not rechecked.")
 
+        # Gold-standard human labeled dataset audit
+        human_csv = ROOT_DIR / "data/youtube_corpus_100_comments_human_labeled.csv"
+        if human_csv.exists():
+            df_human = pd.read_csv(human_csv)
+            if len(df_human) == 100 and df_human.isna().sum().sum() == 0:
+                valid_labels = {"positive", "neutral", "negative"}
+                if set(df_human["human_label"].unique()).issubset(valid_labels):
+                    self.record_pass("Human-labeled YouTube dataset has 100 rows, 0 NaNs, and valid sentiment categories")
+                else:
+                    self.record_fail("Human-labeled sentiment categories", f"Invalid categories: {set(df_human['human_label'].unique())}")
+            else:
+                self.record_fail("Human-labeled dataset integrity", f"Rows={len(df_human)}, NaNs={df_human.isna().sum().sum()}")
+        else:
+            self.record_fail("Missing file", "data/youtube_corpus_100_comments_human_labeled.csv does not exist")
+
         # Monte Carlo 150 trials
         df_mc = pd.read_csv(ROOT_DIR / "data/monte_carlo_trial_level_results.csv")
         if len(df_mc) == 150:
