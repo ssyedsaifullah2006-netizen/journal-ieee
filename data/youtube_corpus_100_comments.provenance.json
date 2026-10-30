@@ -11,6 +11,7 @@
   "video_publish_time_utc": "2009-10-25T06:57:33+00:00",
   "sentiment_method": "NLTK VADER compound score; thresholds +/-0.05",
   "csv_file": "youtube_corpus_100_comments.csv",
-  "csv_sha256": "8a019bac959b7eac48d3c7dc62a9bf7f816b5bb467cbacfe1384bf12b44acb7a",
-  "post_processing": "2 NaN text entries replaced with placeholder '[non-text or emoji-only comment]'"
+  "csv_sha256": "847ef00163829ee5c07bff211a60cb51f8f1fa04485f49e077b9d0f96e4f2470",
+  "post_processing": "2 NaN text entries replaced with placeholder '[non-text or emoji-only comment]'; commenter display names replaced by irreversible pseudonyms (user_XXXXXXXX) after retrieval; comment text, IDs, likes, ranks and timestamps unchanged",
+  "original_csv_sha256": "8a019bac959b7eac48d3c7dc62a9bf7f816b5bb467cbacfe1384bf12b44acb7a"
 }

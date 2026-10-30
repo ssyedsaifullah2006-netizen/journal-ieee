@@ -1,42 +1,38 @@
-# Pre-Submission Evidence Gate: PACE Manuscript Audit
+# Pre-Submission Audit: PACE Manuscript
 
-**Current status: ALL AUDIT GATES PASSED. MANUSCRIPT AND CODEBASE FULLY READY FOR SUBMISSION.** All 30 bibliographic references verified with official publisher DOIs/URLs, the 72.1% statistic verified against Zhao et al. (arXiv:2502.00952), IEEEtran.cls bundled, and 22/22 QA verification checks pass cleanly.
+**Status: manuscript, code and data are consistent and reproducible. Five author-side items (below) must be completed before upload.** Nothing here is a guarantee of acceptance; it records what was checked and what was not.
 
-This document tracks empirical verification gates, methodology disclosures, and provenance requirements for the manuscript. Following the strategic pivot to an **Audit and Diagnostic Framework for Exposure-Conditioned Sentiment Consensus**, all observational limits, lexicon degradation, baseline sensitivity, and ranking endogeneity are formally reported as primary scientific contributions.
+## Verified in this repository
 
-## What is Reproducible and Verified
+- **Numbers reproduce.** `reproduce_all_experiments.py`, `sensitivity_analysis.py` and `evaluate_vader_accuracy.py` were re-run from a clean copy; every CSV/JSON in `data/` was byte-identical to the committed version.
+- **Automated checks.** `experiments/run_exhaustive_verification.py` runs 23 checks. In an environment without the NLTK VADER lexicon one check (re-scoring the corpus with VADER) cannot run and reports a warning; with the lexicon installed it should pass.
+- **Corpus provenance.** Retrieved via YouTube Data API v3 on 2026-10-30 (07:09 UTC); SHA-256 manifest in `data/youtube_corpus_100_comments.provenance.json`. Commenter display names were pseudonymized afterwards (`experiments/pseudonymize_authors.py`); the manifest records both the original and the post-processing hash and says so.
+- **Claims match the evidence.** The paper no longer claims universal superiority, a fixed "90.7%" error reduction (it depends on the choice of target Y*), rank-order invariance of PACE, or a "gold-standard" annotation. Scenario-generation limits, ranking endogeneity, lexicon failure and single-annotator labels are disclosed.
+- **Bibliography.** Eight entries were corrected against publisher/index records (wrong authors, venue, pages or DOI; one entry, Vardasbi et al., pointed to a different paper than the one cited, and the sentence describing it was rewritten). See the table below.
 
-- **Deterministic Monte Carlo Benchmarks:** Synthetic generators, seeds (42..91), trial-level CSV tables ($M=50$ trials $\times$ 3 scenarios = 150 rows), and ablation tables reproduce identically via `experiments/reproduce_all_experiments.py`.
-- **Closed-Form Dynamic Regression:** Model dynamically fits log-linear parameters and Duan's smearing retransformation factor ($\ge 1.0$) across all trials.
-- **Corpus Provenance Verified:** The YouTube corpus (`data/youtube_corpus_100_comments.csv`) was retrieved via YouTube Data API v3 on 2026-10-30 at 07:09 UTC and is validated by a dated, SHA-256 provenance manifest (`youtube_corpus_100_comments.provenance.json`).
-- **Gold-Standard Human Semantic Audit:** An exhaustive human annotation of all 100 comments (`data/youtube_corpus_100_comments_human_labeled.csv` and `experiments/evaluate_vader_accuracy.py`) establishes that VADER achieves 65.0% accuracy, 0.5307 macro F1, 46% zero-inflation, and misclassifies 23.9% of positive comments as negative.
-- **Sensitivity Audits:** Systematic evaluation across ground truth targets ($Y^* \in [-0.40, +0.10]$) and baseline distortions ($0.25\times \dots 2.0\times, \sqrt{E}$) proves that PACE consensus swings with target definitions and baseline scale (`experiments/sensitivity_analysis.py`).
-- **Data-Generation Flaws Disclosed:** The manuscript explicitly discloses that likes in Scenarios 1 and 2 are drawn from uniform block cohorts rather than the parametric power law assumed by PACE.
-- **Bibliography Verified:** All 30 references in `latex/references.bib` are standard, verified academic entries with verified DOIs/URLs, including the corrected Dora Zhao et al. (arXiv:2502.00952, 2025) citation.
-- **Automated Verification:** All 20 QA checks in `experiments/run_exhaustive_verification.py` pass with 0 failures and 0 warnings.
+## Reference verification detail
 
-## Methodological Boundaries and Framing Commitments
+| Status | Entries |
+|---|---|
+| Title, authors, venue, year and DOI matched to a publisher/index record I read | joachims2017unbiased, zubiaga2016stance (no DOI exists; ACL URL is inferred), cakmak2024bias, shajari2025safeguarding, wang2018position, agarwal2019addressing, vardasbi2020when, craswell2008experimental, tsagkias2009predicting, thelwall2018social, thelwall2010sentiment, severyn2016multilingual, horvitz1952generalization, muchnik2013social, noelle1974spiral, hutto2014vader, pontiki2016semeval, zhao2025spiral, davison1997bootstrap, huber1981robust, hampel1986robust |
+| Matched on title/authors/venue but **DOI or a field not independently resolved** (click each before submission) | duan1983smearing (volume/issue/pages from a secondary list), wu2018beyond (pages), borghol2012untold (DOI), rosenbaum1983central (DOI), salganik2006experimental (issue number), gomez2008statistical (DOI, pages), ernst2004permutation (DOI), wilcoxon1945individual (DOI, issue), rousseeuw1993alternatives (JSTOR DOI 10.2307/2291267 taken from the repository record; issue number) |
 
-1. **Retrieved Rank is an Observational Proxy:** The rank returned by the API is retrieval-time relevance, which incorporates likes and cannot reconstruct historical visual impressions. The paper presents PACE as exposure-proxy conditioning, not causal identification.
-2. **Real-World Corpus has No Semantic Ground Truth:** Discussion on the Rick Astley corpus consists of meme humor, making "consensus" ill-posed. Descriptive weight diagnostics and lexicon failure modes are reported, not real-world predictive accuracy.
-3. **Observational Fit Calibration:** The exposure fit has an expected/observed ratio of $\approx 6.22\times$ and degenerate parameters due to temporal compression (9-17 years). This is reported as an empirical demonstration of the vulnerability of observational exposure modeling.
-4. **No Universal Superiority Claims:** The manuscript explicitly disclaims universal superiority. PACE outperforms heuristic weighting under late-emerging groundswells ($Y^* = -0.100$), but degrades when targeting overall participant means or symmetric feeds, where unweighted averaging is optimal.
+Crossref and doi.org were not reachable from the review environment, so no DOI was resolved programmatically and no retraction database was queried.
 
-## Release Gate Verification Commands
+## Author-side items still open
+
+1. **Second annotator.** The 100 reference labels come from one annotator (disclosed in the paper). Have another person label `data/annotation_sheet_second_rater.csv` following `ANNOTATION_GUIDELINES.md`, run `python experiments/compute_agreement.py`, and add Cohen's kappa to Section V-E and the matching limitation. Only 3 of 100 comments are labeled negative, so negative-class precision (12.5%) rests on three comments.
+2. **Resolve the nine bibliography fields above** (click the DOIs / check the issue and page numbers).
+3. **Compile in Overleaf** with the official `IEEEtran.cls`/`IEEEtran.bst` and check page count and layout against the target journal's current author guidelines.
+4. **IEEE policy items:** disclose any use of AI tools for text or code in the Acknowledgments if applicable; add funding/conflict-of-interest statements if the journal requires them.
+5. **Data release.** Confirm that redistributing comment text complies with the YouTube API Services Terms. Raw commenter handles remain in earlier git commits; to remove them, rewrite history (e.g. `git filter-repo`) or publish the data from a fresh repository.
+
+## Reproduce
 
 ```bash
-# 1. Run all 50 Monte Carlo trials across Scenarios 1-3
 python experiments/reproduce_all_experiments.py
-
-# 2. Run ground-truth and baseline sensitivity audits
 python experiments/sensitivity_analysis.py
-
-# 3. Run human-labeled VADER semantic accuracy audit
 python experiments/evaluate_vader_accuracy.py
-
-# 4. Generate 300 DPI publication figures
 python experiments/generate_publication_figures.py
-
-# 5. Run exhaustive QA verifier
 python experiments/run_exhaustive_verification.py
 ```

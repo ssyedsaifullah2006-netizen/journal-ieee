@@ -20,6 +20,8 @@ from dotenv import load_dotenv
 load_dotenv(ROOT / ".env")
 API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 
+_SALT = os.urandom(32)
+
 VIDEO_ID = "dQw4w9WgXcQ"
 MAX_COMMENTS = 100
 COLLECTION_METHOD = "youtube.commentThreads.list(order=relevance, top-level comments only)"
@@ -55,7 +57,9 @@ def fetch_comments(video_id, api_key, max_results=100):
             snippet = item["snippet"]["topLevelComment"]["snippet"]
             comments.append({
                 "comment_id": item["snippet"]["topLevelComment"]["id"],
-                "author": snippet["authorDisplayName"],
+                # Display names are personal data and are never used by any estimator;
+                # store only an irreversible pseudonym (random per-run salt, discarded).
+                "author": "user_" + hashlib.sha256(_SALT + snippet["authorDisplayName"].encode("utf-8")).hexdigest()[:8],
                 "timestamp": snippet["publishedAt"],
                 "likes": snippet["likeCount"],
                 "replies": item["snippet"]["totalReplyCount"],
@@ -174,7 +178,7 @@ def main():
     likes = [c["likes"] for c in comments]
     scores = [c["sentiment_score"] for c in comments]
     arrivals = [c["arrival_hours"] for c in comments]
-    unique_authors = len(set(c["author"] for c in comments))
+    unique_authors = len(set(c["author"] for c in comments))  # pseudonymous ids
 
     print(f"\n--- Corpus Summary ---")
     print(f"  N = {len(comments)}")
@@ -184,7 +188,6 @@ def main():
     print(f"  Unique sentiment values: {len(set(scores))}")
     print(f"  Arrival hours range: {min(arrivals):.2f} - {max(arrivals):.2f}h")
     print(f"  Zero-like comments: {sum(1 for l in likes if l == 0)}")
-    print(f"  Sample authors: {[c['author'] for c in comments[:5]]}")
     print(f"  Likes monotonically decreasing: {all(likes[i] >= likes[i+1] for i in range(len(likes)-1))}")
     print(f"  DONE.")
 

@@ -83,10 +83,13 @@ def plot_figure_monte_carlo_mae():
     ax.grid(True, axis='y')
     ax.set_ylim(0, 0.13)
     
-    # Annotate statistical victory
-    ax.annotate('PACE reduces MAE by 90.7%\n(p < 0.00001, Wilcoxon)',
-                xy=(x[1] + 1.5 * width, means['pace_mae'][1]),
-                xytext=(x[1] + 0.6, 0.05),
+    # Neutral, target-qualified callout. The size of PACE's advantage in S2 depends on
+    # how the ground truth Y* is defined (see the sensitivity analysis), so it is not
+    # presented as a universal error reduction.
+    h2, p2 = means['heuristic_mae'][1], means['pace_mae'][1]
+    ax.annotate(f'S2 with Y* = -0.100:\nPACE {p2:.3f} vs. Heuristic {h2:.3f}\n(target-dependent; see sensitivity audit)',
+                xy=(x[1] + 1.5 * width + width / 2, p2 / 2),
+                xytext=(x[1] + 0.55, 0.05),
                 arrowprops=dict(facecolor='black', shrink=0.08, width=1, headwidth=5),
                 fontsize=8.5, bbox=dict(boxstyle="round,pad=0.3", fc="#e5f5e0", ec="#2ca02c", lw=1))
 
@@ -181,7 +184,7 @@ def plot_figure_weight_distributions():
     ax1.grid(True)
     ax1.legend(loc='upper right')
     
-    ax1.annotate(f'Outlier Rank #1\nHeuristic: {w_heur_s1[0]:.3f}\nPACE: {w_pace_s1[0]:.3f} (-28%)',
+    ax1.annotate(f'Outlier Rank #1\nHeuristic: {w_heur_s1[0]:.3f}\nPACE: {w_pace_s1[0]:.3f} ({-100*(1 - w_pace_s1[0]/w_heur_s1[0]):.0f}%)',
                  xy=(1, w_heur_s1[0]), xytext=(8, w_heur_s1[0] - 0.015),
                  arrowprops=dict(facecolor='black', shrink=0.08, width=1, headwidth=4),
                  fontsize=8, bbox=dict(boxstyle="round,pad=0.2", fc="#f0f0f0", ec="gray"))

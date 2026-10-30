@@ -196,6 +196,20 @@ class ExhaustiveVerifier:
         else:
             self.record_fail("Missing file", "data/youtube_corpus_100_comments_human_labeled.csv does not exist")
 
+        # Privacy: released files must contain pseudonymous commenter ids only
+        pseudo_ok = True
+        for rel in ["data/youtube_corpus_100_comments.csv", "data/youtube_corpus_100_comments_human_labeled.csv"]:
+            col = pd.read_csv(ROOT_DIR / rel)["author"].astype(str)
+            if not col.str.fullmatch(r"user_[0-9a-f]{8}").all():
+                pseudo_ok = False
+        labeling_json = (ROOT_DIR / "data/comments_for_labeling.json").read_text(encoding="utf-8")
+        if '"author": "@' in labeling_json:
+            pseudo_ok = False
+        if pseudo_ok:
+            self.record_pass("Released data files contain pseudonymous commenter ids only (no raw display names)")
+        else:
+            self.record_fail("Commenter privacy", "Raw YouTube display names found in released data; run experiments/pseudonymize_authors.py")
+
         # Monte Carlo 150 trials
         df_mc = pd.read_csv(ROOT_DIR / "data/monte_carlo_trial_level_results.csv")
         if len(df_mc) == 150:
@@ -291,7 +305,7 @@ class ExhaustiveVerifier:
             self.record_fail("Missing citations", f"Cited keys missing in bib: {missing_in_bib}")
 
         if len(bib_keys) >= 30:
-            self.record_pass(f"references.bib contains {len(bib_keys)} comprehensive peer-reviewed references (>= 30 required)")
+            self.record_pass(f"references.bib contains {len(bib_keys)} bibliographic entries (>= 30 required)")
         else:
             self.record_warn("Bibliography size", f"Found {len(bib_keys)} references, recommended >= 30")
 
