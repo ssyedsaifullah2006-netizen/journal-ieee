@@ -301,6 +301,13 @@ class ExhaustiveVerifier:
         else:
             self.record_fail("Algorithm environment", "Missing \\begin{algorithm} block")
 
+        # Check IEEEtran.cls presence
+        cls_file = ROOT_DIR / "latex/IEEEtran.cls"
+        if cls_file.exists() and cls_file.stat().st_size > 50000:
+            self.record_pass("IEEEtran.cls is present and bundled directly in latex/ directory")
+        else:
+            self.record_fail("Missing document class", "IEEEtran.cls is missing or empty in latex/")
+
         # Check all referenced figures exist in latex/figures/
         figure_matches = re.findall(r'\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}', tex_content)
         all_figs_exist = True

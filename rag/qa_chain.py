@@ -66,8 +66,8 @@ class QAChain:
                 else:
                     raise
 
-    def ask(self, question: str, n_results: int = None, history: Optional[List[Tuple[str, str]]] = None) -> dict:
-        """Answer a question using RAG. Uses config.RAG_TOP_K for retrieval."""
+    def ask(self, question: str, n_results: int = None, history: Optional[List[Tuple[str, str]]] = None, global_context: Optional[dict] = None) -> dict:
+        """Answer a question using RAG. Uses config.RAG_TOP_K for retrieval, enriched with global corpus metrics."""
         if n_results is None:
             n_results = config.RAG_TOP_K
 
@@ -98,16 +98,32 @@ class QAChain:
                 history_str += f"User: {q}\nAI: {a}\n\n"
 
         context = "\n".join(source_comments)
-        prompt = f"""You are an expert community manager and data analyst.
-Answer the user's question using the relevant comments below.
 
-- Be thorough and use specific examples from the comments.
+        global_metrics_str = ""
+        if global_context:
+            sentiment = global_context.get("sentiment", {})
+            weighted = global_context.get("weighted_sentiment", {})
+            summary = global_context.get("summary", "")
+            global_metrics_str = (
+                f"### Overall Corpus Context & Verified Consensus:\n"
+                f"- Total Comments Evaluated: {sentiment.get('total', 'N/A')}\n"
+                f"- Raw Sentiment: {sentiment.get('positive_pct', 0)*100:.1f}% Positive, {sentiment.get('negative_pct', 0)*100:.1f}% Negative, {sentiment.get('neutral_pct', 0)*100:.1f}% Neutral\n"
+                f"- Engagement-Weighted Sentiment: {weighted.get('positive', 0)*100:.1f}% Positive, {weighted.get('negative', 0)*100:.1f}% Negative, {weighted.get('neutral', 0)*100:.1f}% Neutral\n"
+            )
+            if summary:
+                global_metrics_str += f"- Synthesis: {summary[:500]}...\n\n"
+
+        prompt = f"""You are an expert community manager and data analyst.
+Answer the user's question using the global corpus context and relevant comments below.
+
+- When asked about general consensus, audience sentiment, or overall reception, ALWAYS ground your answer in the Overall Corpus Context (percentages and weighted consensus) rather than relying solely on the sample comments.
+- Be thorough and cite specific exemplar comments.
 - Use Markdown formatting for structure.
 - If the context doesn't fully answer the question, say so.
 
 {history_str}
-
-### Context (Social Media Comments):
+{global_metrics_str}
+### Relevant Retrieved Comments:
 {context}
 
 ### User's Question:

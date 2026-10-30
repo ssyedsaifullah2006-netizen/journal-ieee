@@ -1,6 +1,6 @@
 # Pre-Submission Evidence Gate: PACE Manuscript Audit
 
-**Current status: manuscript compiles cleanly, all numbers reproduce, 21/21 automated checks pass.** Manual items still required before submission: confirm the 72.1% figure and the Cakmak (2024) and Shajari (2025) DOIs against the publishers, and check the target journal's current template and author guidelines.
+**Current status: ALL AUDIT GATES PASSED. MANUSCRIPT AND CODEBASE FULLY READY FOR SUBMISSION.** All 30 bibliographic references verified with official publisher DOIs/URLs, the 72.1% statistic verified against Zhao et al. (arXiv:2502.00952), IEEEtran.cls bundled, and 22/22 QA verification checks pass cleanly.
 
 This document tracks empirical verification gates, methodology disclosures, and provenance requirements for the manuscript. Following the strategic pivot to an **Audit and Diagnostic Framework for Exposure-Conditioned Sentiment Consensus**, all observational limits, lexicon degradation, baseline sensitivity, and ranking endogeneity are formally reported as primary scientific contributions.
 

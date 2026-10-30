@@ -211,13 +211,24 @@ Return a JSON object with this EXACT structure:
         f"(Gini inequality G={local_report.get('reliability_metric', {}).get('gini', 0):.2f})."
     )
 
+    pos_count = raw.get("positive", 0)
+    neu_count = raw.get("neutral", 0)
+    neg_count = raw.get("negative", 0)
+    total_count = raw.get("total", len(comment_texts))
+
+    fallback_topics = [
+        {"name": "Positive Reception & Appreciation", "count": pos_count, "description": "Comments expressing praise, agreement, or positive engagement"},
+        {"name": "Neutral & Discussion Commentary", "count": neu_count, "description": "Factual observations, queries, and conversational remarks"},
+        {"name": "Critical Feedback & Complaints", "count": neg_count, "description": "Critiques, negative reactions, or points of contention"}
+    ]
+    fallback_topics = [t for t in fallback_topics if t["count"] > 0]
+    if not fallback_topics:
+        fallback_topics = [{"name": "Audience Reception", "count": total_count, "description": "General viewer discussion"}]
+
     return {
-        "topics": [
-            {"name": "Audience Reception", "count": raw.get("total", len(comment_texts)), "description": "Overall viewer feedback and discussions"},
-            {"name": "Top Endorsed Perspectives", "count": int(raw.get("total", 100) * 0.4), "description": "High-engagement reaction threads"}
-        ],
+        "topics": fallback_topics,
         "summary": fallback_summary,
-        "key_themes": ["Audience Feedback", "Community Engagement", "Sentiment Drift"],
+        "key_themes": ["Audience Feedback", "Community Engagement", "Sentiment Drift"] if flip.get("flip_detected") else ["Audience Feedback", "Discussion Consensus"],
         "notable_opinions": ["Viewer opinions highlighted in engagement weighting analysis."],
         "controversies": ["Disparity between raw comment frequency and high-engagement comment reaction."] if flip.get("flip_detected") else []
     }
@@ -279,9 +290,17 @@ async def api_fetch(req: FetchRequest):
 
         sample = [vars(c) for c in comments[:5]]
 
-        # 2. Sort by engagement (likes + text length) for best quality analysis
-        sorted_comments = sorted(comments, key=lambda c: (c.likes or 0, len(c.text)), reverse=True)
-        comment_texts = [c.text for c in sorted_comments]
+        # 2. Representative systematic stratified sampling across the comment stream (prevents engagement bias)
+        n_total = len(comments)
+        max_analyze = min(n_total, config.MAX_ANALYSIS_COMMENTS)
+        if n_total <= max_analyze:
+            sampled_comments = list(comments)
+        else:
+            # Uniformly step across the rank/arrival sequence to ensure representative discourse coverage
+            step = n_total / max_analyze
+            sampled_comments = [comments[int(i * step)] for i in range(max_analyze)]
+
+        comment_texts = [c.text for c in sampled_comments]
         comments_data = [vars(c) for c in comments]
 
         loop = asyncio.get_running_loop()
@@ -388,7 +407,11 @@ async def api_rag_ask(req: AskRequest):
             raise HTTPException(status_code=400, detail="No data loaded. Fetch comments first.")
 
         history = session.get('chat_history', [])
-        result = qa.ask(question=req.question, history=history)
+        result = qa.ask(
+            question=req.question,
+            history=history,
+            global_context=session.get('analysis_results')
+        )
 
         answer = result.get('answer', '')
         source_comments = result.get('source_comments', [])
