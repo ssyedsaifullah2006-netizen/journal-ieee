@@ -129,7 +129,8 @@ def main():
         suite = ConsensusEstimatorSuite(records)
         u = suite.estimate_unweighted()
         h = suite.estimate_heuristic_log_likes()
-        ip = suite.estimate_position_ips()
+        ip = suite.estimate_position_ips()       # IPE
+        nips = suite.estimate_normalized_ips()   # genuine NIPS
         p = suite.estimate_pace()
 
         dist = {"positive": 0, "neutral": 0, "negative": 0}
@@ -144,7 +145,8 @@ def main():
             "zero_inflation_count": zero, "zero_inflation_pct": round(zero / len(records), 4),
             "mu_unweighted": round(u["consensus_score"], 4),
             "mu_heuristic": round(h["consensus_score"], 4),
-            "mu_nc_ips": round(ip["consensus_score"], 4),
+            "mu_ipe": round(ip["consensus_score"], 4),
+            "mu_nips": round(nips["consensus_score"], 4),
             "mu_pace": round(p["consensus_score"], 4),
             "wmax_heuristic": round(float(max(h["weights"])), 4),
             "wmax_pace": round(float(max(p["weights"])), 4),

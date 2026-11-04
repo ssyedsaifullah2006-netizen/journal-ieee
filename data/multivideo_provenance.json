@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_platform": "YouTube Data API v3",
-  "retrieved_at_utc": "2026-11-04T13:33:06.243349+00:00",
+  "retrieved_at_utc": "2026-11-04T13:42:19.995790+00:00",
   "collection_method": "youtube.commentThreads.list(order=relevance, top-level comments only)",
   "ranking_interpretation": "retrieval-time relevance order; not historical display rank",
   "sentiment_method": "NLTK VADER compound score; thresholds +/-0.05",
@@ -21,7 +21,7 @@
       "video_title": "I Tested This \u20b930,000 Phone - Because of You !",
       "published_at_utc": "2026-11-03T16:06:25Z",
       "csv_file": "multivideo_smartphone_30k.csv",
-      "csv_sha256": "9c61469761fa056498f7301e4fb6af19f772ccda8cc81f30b11b4ba63dd20421",
+      "csv_sha256": "e9a8ee9f4af1ede793f3d8984333aa5ac79191aeb794490ba75329c1aa616f68",
       "n_comments": 100
     },
     {
@@ -30,7 +30,7 @@
       "video_title": "iPhone Duo \u2013 1 Week Later: An HONEST Review",
       "published_at_utc": "2026-10-28T21:55:29Z",
       "csv_file": "multivideo_iphone_review.csv",
-      "csv_sha256": "3e9fa809f6138183bec44a80a0dda28342f323cc5ba56a030cb8eef282c6d594",
+      "csv_sha256": "9942271ac368a5e2d37efa62ad4a399ba76c47e154898880093825fad490d530",
       "n_comments": 100
     },
     {
