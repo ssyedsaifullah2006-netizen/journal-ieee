@@ -91,15 +91,41 @@ def ols_inference(X, y, beta, residuals):
         except Exception:
             vifs.append(float("nan"))
 
+    # HC3 heteroscedasticity-consistent SEs + influence diagnostics
+    try:
+        XtX_inv = np.linalg.inv(X.T @ X)
+        H = X @ XtX_inv @ X.T
+        h = np.clip(np.diag(H), 0.0, 1.0 - 1e-12)
+        w = residuals / (1.0 - h)
+        meat = X.T @ (np.diag(w ** 2) @ X)
+        cov_hc3 = XtX_inv @ meat @ XtX_inv
+        se_hc3 = np.sqrt(np.clip(np.diag(cov_hc3), 0.0, None))
+        t_hc3 = beta / np.where(se_hc3 > 0, se_hc3, float("nan"))
+        cooks = (residuals ** 2) / (p * sigma2) * (h / (1.0 - h) ** 2)
+        max_leverage = float(np.max(h))
+        high_lev = int(np.sum(h > 2 * p / n))
+        max_cook = float(np.max(cooks)) if np.all(np.isfinite(cooks)) else float("nan")
+    except Exception:
+        se_hc3 = np.full(p, float("nan"))
+        t_hc3 = np.full(p, float("nan"))
+        max_leverage = float("nan")
+        high_lev = 0
+        max_cook = float("nan")
+
     return {
         "beta_se": [float(v) for v in se],
         "beta_t": [float(v) for v in t],
+        "beta_se_hc3": [float(v) for v in se_hc3],
+        "beta_t_hc3": [float(v) for v in t_hc3],
         "residual_dof": int(dof),
         "log_scale_r_squared": float(r2),
         "breusch_pagan_stat": float(bp_stat),
         "breusch_pagan_p": float(bp_p),
         "design_condition_number": float(cond),
         "vif_rank_arrival": [float(v) for v in vifs],
+        "max_leverage": float(max_leverage),
+        "high_leverage_count": int(high_lev),
+        "max_cooks_distance": float(max_cook),
     }
 
 

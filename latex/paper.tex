@@ -213,7 +213,7 @@ A critical methodological distinction exists across these generators. In Scenari
 
 \subsection{Baselines and Evaluation Metrics}
 \begin{itemize}
-    \item \textbf{Baselines:} (1) Unweighted Mean, (2) Heuristic Log-Likes, (3) Normalized Clipped IPS (NC-IPS, $\gamma = 0.8$, 90th percentile clip \cite{joachims2017unbiased}), and (4) PACE.
+    \item \textbf{Baselines:} (1) Unweighted Mean, (2) Heuristic Log-Likes, (3) Inverse-Propensity Engagement-Weighted (IPE), implemented as clipped inverse-rank propensity ($\gamma = 0.8$, 90th percentile clip) $\times \ln(1+L_i)$ and then normalized---an engagement-weighted hybrid that does \emph{not} reproduce Joachims' normalized clipped IPS \cite{joachims2017unbiased}; the shorthand ``NC-IPS'' in tables refers to this IPE estimator, and (4) PACE.
     \item \textbf{Evaluation Metrics:}
     \begin{itemize}
         \item \textbf{Ground-Truth MAE:} $\text{MAE} = |\hat{\mu} - Y^*|$ for synthetic configurations.

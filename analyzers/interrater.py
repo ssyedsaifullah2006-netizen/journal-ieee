@@ -56,6 +56,19 @@ def cohens_kappa(y1, y2, labels=None):
     return float((po - pe) / (1 - pe)) if pe < 1 else 0.0
 
 
+def scotts_pi(y1, y2, labels=None):
+    """Scott's pi for two raters (pooled/average marginals).
+
+    Scott's pi is the two-rater limit of nominal Krippendorff's alpha.
+    """
+    cm, _ = _confusion(y1, y2, labels)
+    n = cm.sum()
+    po = np.trace(cm) / n
+    p = (cm.sum(axis=1) + cm.sum(axis=0)) / (2.0 * n)
+    pe = float(np.sum(p ** 2))
+    return float((po - pe) / (1 - pe)) if pe < 1 else 0.0
+
+
 def weighted_kappa(y1, y2, weights="quadratic", labels=None):
     """Weighted Cohen's kappa for ordinal categories.
 
@@ -84,60 +97,113 @@ def weighted_kappa(y1, y2, weights="quadratic", labels=None):
 def fleiss_kappa(ratings):
     """Fleiss' kappa for multiple raters, nominal categories.
 
-    ratings: (n_units, n_raters) array of integer category codes.
-    Rows may be ragged (missing raters) via -1 entries; missing entries are
-    skipped.
+    ratings: (n_units, n_raters) array of integer category codes; entries < 0
+    are treated as missing.
+
+    Missing-data assumptions (documented):
+    - Fleiss' kappa assumes every unit is rated by the SAME number of raters.
+    - A unit with fewer than two valid ratings is EXCLUDED: agreement is
+      undefined for a single rating, and it is NOT treated as perfect.
+    - When the number of valid ratings varies across units, the per-unit n_i is
+      used in the P_i term; this is a common generalization that is exact only
+      when n_i is constant. This caveat is reported via the returned tuple's
+      second element.
+
+    Returns (kappa, info) where info is a dict with 'units_used',
+    'units_dropped', and 'n_raters'.
     """
     ratings = np.asarray(ratings, dtype=int)
+    if ratings.ndim != 2 or ratings.shape[1] < 2:
+        raise ValueError("ratings must be a (n_units, n_raters) matrix with >= 2 raters")
     n_units, n_raters = ratings.shape
-    k = ratings[ratings >= 0].max() + 1
+    valid = ratings >= 0
+    n_i = valid.sum(axis=1)
+    keep = n_i >= 2
+    if keep.sum() == 0:
+        raise ValueError("No unit has at least two valid ratings; Fleiss' kappa is undefined.")
+    k = ratings[valid].max() + 1
 
-    # per-unit: number of ratings and category counts
-    n_i = (ratings >= 0).sum(axis=1)
-    # P_i = (sum_j n_ij^2 - n_i) / (n_i*(n_i-1))
-    P_i = np.zeros(n_units)
-    for u in range(n_units):
-        counts = np.bincount(ratings[u][ratings[u] >= 0], minlength=k)
-        nu = n_i[u]
-        if nu > 1:
-            P_i[u] = (float(np.sum(counts ** 2)) - nu) / (nu * (nu - 1))
-        else:
-            P_i[u] = 1.0  # a single rating is trivially consistent
+    P_i = np.zeros(int(keep.sum()))
+    for idx, u in enumerate(np.where(keep)[0]):
+        counts = np.bincount(ratings[u][valid[u]], minlength=k)
+        nu = int(n_i[u])
+        P_i[idx] = (float(np.sum(counts ** 2)) - nu) / (nu * (nu - 1))
     P_bar = float(np.mean(P_i))
-    # p_j = proportion of all assignments to category j
+
     p_j = np.zeros(k)
-    for u in range(n_units):
-        counts = np.bincount(ratings[u][ratings[u] >= 0], minlength=k)
-        p_j += counts
+    for u in np.where(keep)[0]:
+        p_j += np.bincount(ratings[u][valid[u]], minlength=k)
     p_j = p_j / p_j.sum()
     P_e = float(np.sum(p_j ** 2))
-    kappa = (P_bar - P_e) / (1 - P_e) if P_e < 1 else 0.0
+    kappa = (P_bar - P_e) / (1 - P_e) if P_e < 1 else float("nan")
     return float(kappa)
 
 
 def krippendorff_alpha(ratings, level_of_measurement="nominal"):
-    """Krippendorff's alpha.
+    """Krippendorff's alpha via the coincidence-matrix formulation (nominal).
 
-    For the two-rater nominal case this is exactly Cohen's kappa, so it
-    delegates and documents the equivalence. For >2 raters or ordinal/interval
-    data, a full coincidence-matrix implementation is required and is
-    intentionally not hand-rolled here (to avoid an unverified implementation).
+    ratings: (n_units, n_raters) numeric matrix; NaN (or values < 0) are missing.
+    The difference function for the nominal level is delta(c,k) = 0 if c == k
+    else 1.
+
+    This is the general coincidence-matrix computation; it does NOT substitute
+    Cohen's kappa or Fleiss' kappa. For two raters with no missing data it
+    numerically coincides with Scott's pi (pooled-marginal agreement), which is
+    the correct two-rater limit (it is NOT Cohen's kappa, which uses
+    rater-specific marginals).
+
+    Returns:
+      float alpha, or float('nan') when the statistic is undefined
+      (single-category / zero-variability data, where expected disagreement is 0).
+    Raises ValueError for invalid input or insufficient data.
     """
-    ratings = np.asarray(ratings, dtype=int)
-    n_units, n_raters = ratings.shape
     if level_of_measurement != "nominal":
-        raise NotImplementedError(
-            "Only the nominal level is provided. For ordinal/interval agreement "
-            "use weighted_kappa (2 raters) or an external vetted implementation."
-        )
-    if n_raters == 2:
-        # Krippendorff's alpha == Cohen's kappa for 2 raters + nominal data.
-        a = ratings[:, 0]
-        b = ratings[:, 1]
-        mask = (a >= 0) & (b >= 0)
-        return cohens_kappa(a[mask], b[mask])
-    # >2 raters: Fleiss' kappa is the standard multi-rater nominal statistic.
-    return fleiss_kappa(ratings)
+        raise NotImplementedError("Only the nominal level is implemented.")
+    ratings = np.asarray(ratings, dtype=float)
+    if ratings.ndim != 2:
+        raise ValueError("ratings must be a 2D (units x raters) array.")
+    n_units, n_raters = ratings.shape
+    if n_raters < 2:
+        raise ValueError("At least two raters are required.")
+
+    # Coincidence matrix: for each unit with m valid ratings, add 1/(m-1) for
+    # each ordered pair of distinct raters.
+    o = {}
+    for u in range(n_units):
+        vals = ratings[u][~np.isnan(ratings[u])]
+        m = len(vals)
+        if m < 2:
+            continue
+        w = 1.0 / (m - 1)
+        for i in range(m):
+            for j in range(m):
+                if i != j:
+                    key = (vals[i], vals[j])
+                    o[key] = o.get(key, 0.0) + w
+
+    if not o:
+        raise ValueError("No coincidences available; alpha is undefined.")
+
+    n_c = {}
+    for (c, _k), w in o.items():
+        n_c[c] = n_c.get(c, 0.0) + w
+    N = sum(n_c.values())
+    if N <= 1:
+        raise ValueError("Total coincidences <= 1; alpha is undefined.")
+
+    # Observed disagreement (nominal): off-diagonal coincidences / N.
+    D_o = sum(w for (c, k), w in o.items() if c != k) / N
+    # Expected disagreement: sum_{c != k} pi_c pi_k = 1 - sum_c pi_c^2,
+    # where pi_c = n_c / N. Equivalently (N^2 - sum n_c^2) / N^2.
+    # NOTE: this reduces to Scott's pi (NOT Cohen's kappa) for two raters.
+    sum_sq = sum(v * v for v in n_c.values())
+    D_e = (N * N - sum_sq) / (N * N)
+
+    if D_e == 0.0:
+        # Zero variability: every rating is the same single category.
+        # The statistic is 0/0 -> undefined.
+        return float("nan")
+    return float(1.0 - D_o / D_e)
 
 
 def agreement_report(rater1, rater2, labels=None):

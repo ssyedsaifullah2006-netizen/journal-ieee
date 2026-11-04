@@ -12,7 +12,7 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
 from analyzers.consensus_framework import ConsensusEstimatorSuite, CommentRecord, ols_inference
-from analyzers.interrater import cohens_kappa, fleiss_kappa, krippendorff_alpha, percent_agreement
+from analyzers.interrater import cohens_kappa, fleiss_kappa, krippendorff_alpha, percent_agreement, scotts_pi
 
 PASS = 0
 FAIL = 0
@@ -74,7 +74,7 @@ def test_interrater():
     a = ["pos", "neg", "neu"] * 10
     check("perfect kappa == 1", cohens_kappa(a, a) == 1.0)
     codes = np.column_stack([np.array([0, 1, 2] * 10), np.array([0, 1, 2] * 10)])
-    check("krippendorff == cohens (2-rater nominal)", krippendorff_alpha(codes) == cohens_kappa(a, a))
+    check("krippendorff == scotts_pi (2-rater nominal)", krippendorff_alpha(codes) == scotts_pi(a, a))
     check("percent agreement in [0,1]", 0.0 <= percent_agreement(a, ["pos", "neu", "neu"] * 10) <= 1.0)
     check("fleiss perfect == 1", fleiss_kappa([[0, 0, 0], [1, 1, 1], [2, 2, 2]]) == 1.0)
 
