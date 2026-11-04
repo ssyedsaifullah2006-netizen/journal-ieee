@@ -397,17 +397,7 @@ To bound the generalizability of the Scenario-2 result, we run additional contro
 This paper presents an empirical investigation and diagnostic framework for exposure-conditioned consensus estimation in ranked discussion streams. PACE demonstrates that combining a log-linear retrieval-proxy model, Duan's smearing retransformation, and robust residual gating can moderate heuristic like-amplification under specific conditions, such as late-emerging groundswells. However, our multi-trial benchmarks and sensitivity audits show that exposure-conditioned weighting is not a universally superior correction: its estimates depend heavily on how the target consensus is specified, and baseline scaling directly shifts output consensus. Furthermore, manual validation of real-world YouTube comments (single annotator, $N = 100$) indicates severe lexicon degradation (46\% zero-inflation, 65\% accuracy), while platform ranking endogeneity limits causal interpretations. The observational YouTube snapshot is descriptive only because historical exposure and participant ground truth are unobserved, despite contemporaneous API provenance. On the semantic side, our manual audit shows that VADER---the de facto rule-based lexicon---is only marginally above a trivial majority-class baseline ($\kappa = 0.402$, exact McNemar $p = 0.044$), so consensus estimates built on lexicons inherit substantial semantic uncertainty. Rather than a drop-in replacement for arithmetic averaging, exposure-conditioned models should be deployed as sensitive diagnostic tools, and this work is best understood as a reproducible audit framework and dataset---not a claim of estimator or lexicon superiority---for auditing both visibility-engagement and semantic-reliability biases in digital discourse.
 
 \section*{Data and Reproducibility Statement}
-All code, datasets, and experiment runners are completely self-contained in the repository:
-\begin{itemize}
-    \item \path{experiments/reproduce_all_experiments.py}: Runs all 50 trials per scenario and outputs raw CSV tables.
-    \item \path{data/monte_carlo_trial_level_results.csv}: All 150 individual trial-level observations.
-    \item \path{data/ablation_trial_level_results.csv}: All 150 individual ablation trial observations.
-    \item \path{data/youtube_corpus_100_comments.csv}: Documented real YouTube dataset ($N=100$).
-    \item \path{experiments/fetch_multivideo_corpus.py}: Fetches and scores the four-video observational corpus (Table~\ref{tab:multivideo}) with dated SHA-256 provenance.
-    \item \path{data/multivideo_summary.csv}: Multi-video estimator and lexicon summary table.
-    \item \path{data/multivideo_provenance.json}: Dated SHA-256 provenance manifest for the four-video corpus.
-    \item \path{data/multivideo_rick_astley_meme.csv}, \path{data/multivideo_smartphone_30k.csv}, \path{data/multivideo_iphone_review.csv}, \path{data/multivideo_thin_device_reveal.csv}: Per-video comment records underlying the summary.
-\end{itemize}
+All code, trial-level outputs, source datasets, and experiment runners are included in the repository. The deterministic simulations are reproduced by \path{experiments/reproduce_all_experiments.py}; the 100-comment corpus, human labels, and trial-level results are under \path{data/}. The four-video extension is supported by \path{experiments/fetch_multivideo_corpus.py}, its per-video CSV files, \path{data/multivideo_summary.csv}, and the dated SHA-256 manifest \path{data/multivideo_provenance.json}.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}

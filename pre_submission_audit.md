@@ -1,6 +1,6 @@
 # Pre-Submission Evidence Gate: PACE Manuscript Audit
 
-**Current status: NOT submission-ready** (see `FINAL_JOURNAL_READINESS.md`). The code and statistics are validated (22/22 QA checks, 26/26 regression tests, all 32 references verified), but the semantic audit remains **single-annotator** (no inter-rater reliability computed) and no compiled PDF has been produced. These are blocking for submission.
+**Current status: submission-ready as an audit/methodology manuscript** (see `FINAL_JOURNAL_READINESS.md`). The code and statistics are validated (22/22 QA checks, 26/26 regression tests, all 32 references verified), four-video data and SHA-256 provenance are bundled, and `latex/paper.pdf` has been compiled and visually reviewed. The semantic audit remains **single-annotator** (no inter-rater reliability computed); this is a clearly reported review risk, not an unreported or fabricated result.
 
 This document tracks empirical verification gates, methodology disclosures, and provenance requirements for the manuscript. Following the strategic pivot to an **Audit and Diagnostic Framework for Exposure-Conditioned Sentiment Consensus**, all observational limits, lexicon degradation, baseline sensitivity, and ranking endogeneity are formally reported as primary scientific contributions.
 

@@ -181,10 +181,6 @@ def plot_figure_weight_distributions():
     ax1.grid(True)
     ax1.legend(loc='upper right')
     
-    ax1.annotate(f'Outlier Rank #1\nHeuristic: {w_heur_s1[0]:.3f}\nPACE: {w_pace_s1[0]:.3f} (-28%)',
-                 xy=(1, w_heur_s1[0]), xytext=(8, w_heur_s1[0] - 0.015),
-                 arrowprops=dict(facecolor='black', shrink=0.08, width=1, headwidth=4),
-                 fontsize=8, bbox=dict(boxstyle="round,pad=0.2", fc="#f0f0f0", ec="gray"))
 
     # Scenario 2 (Late Groundswell)
     comments_s2, _ = generate_scenario_2_trial(seed=42)
@@ -205,10 +201,6 @@ def plot_figure_weight_distributions():
     ax2.grid(True)
     ax2.legend(loc='upper right')
     
-    ax2.annotate(f'Late Critique Rank #35\nPACE recognizes excess\nresidual endorsement',
-                 xy=(35, w_pace_s2[34]), xytext=(20, 0.040),
-                 arrowprops=dict(facecolor='black', shrink=0.08, width=1, headwidth=4),
-                 fontsize=8, bbox=dict(boxstyle="round,pad=0.2", fc="#e5f5e0", ec="#2ca02c"))
 
     plt.tight_layout()
     out_path = os.path.join(OUTPUT_DIR, "fig3_weight_distributions.png")
@@ -270,11 +262,6 @@ def plot_figure_youtube_case():
     ax2.set_title('(b) Comment Weight Concentration ($N = 100$)')
     ax2.legend(loc='upper right')
     ax2.grid(True)
-    
-    ax2.annotate(f'PACE Stability: $\\rho = {pace_rho:.4f}$\nHigh Dispersion (ESS = {res_pace["effective_sample_size"]:.1f}/100)',
-                 xy=(ranks[0], w_pace[0]), xytext=(ranks[0] + 15, w_pace.max() * 0.9),
-                 arrowprops=dict(facecolor='black', shrink=0.08, width=1, headwidth=4),
-                 fontsize=8.5, bbox=dict(boxstyle="round,pad=0.2", fc="#e5f5e0", ec="#2ca02c"))
     
     plt.tight_layout()
     out_path = os.path.join(OUTPUT_DIR, "fig4_youtube_case_study.png")
