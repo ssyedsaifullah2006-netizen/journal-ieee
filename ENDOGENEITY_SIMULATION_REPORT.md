@@ -21,25 +21,26 @@ Scenarios:
 
 ## Results (bias; full table in the script output)
 
-| Scenario | Unw | Heur | NC-IPS | PACE | PACE-LOO |
-|---|---|---|---|---|---|
-| A (no confounding) | 0.000 | +0.001 | +0.002 | +0.002 | +0.002 |
-| B (rank~sent) | 0.000 | +0.059 | **−0.176** | −0.016 | −0.017 |
-| C (arrival~sent) | 0.000 | +0.010 | +0.014 | **−0.001** | −0.001 |
-| D (both~sent) | 0.000 | +0.067 | **−0.156** | −0.018 | −0.020 |
-| E (rank~arrival) | 0.000 | +0.001 | +0.001 | +0.002 | +0.002 |
-| F (likes→rank) | 0.000 | −0.000 | +0.001 | +0.000 | +0.000 |
-| G (latent popularity) | 0.000 | −0.001 | +0.002 | +0.000 | +0.000 |
+| Scenario | Unw | Heur | IPE | NIPS | PACE | PACE-LOO |
+|---|---|---|---|---|---|---|
+| A (no confounding) | 0.000 | +0.001 | +0.002 | +0.001 | +0.002 | +0.002 |
+| B (rank~sent) | 0.000 | +0.059 | −0.176 | **−0.217** | −0.016 | −0.017 |
+| C (arrival~sent) | 0.000 | +0.010 | +0.014 | +0.001 | **−0.001** | −0.001 |
+| D (both~sent) | 0.000 | +0.067 | −0.156 | **−0.205** | −0.018 | −0.020 |
+| E (rank~arrival) | 0.000 | +0.001 | +0.001 | −0.001 | +0.002 | +0.002 |
+| F (likes→rank) | 0.000 | −0.000 | +0.001 | +0.001 | +0.000 | +0.000 |
+| G (latent popularity) | 0.000 | −0.001 | +0.002 | +0.002 | +0.000 | +0.000 |
 
 ## Interpretation (why each estimator behaves as it does)
 
 1. **Unweighted is unbiased (0.000) in every scenario** — by construction, since
    the estimand is the mean of the same sentiments it averages. No weighting can
    beat it for *this* estimand.
-2. **NC-IPS badly overcorrects under rank/arrival–sentiment confounding** (bias
-   −0.176 in B, −0.156 in D) because inverse-rank propensity assigns enormous
-   weight to low-ranked (here, negative-sentiment) comments. This validates the
-   paper's critique of naive IPS for sentiment consensus.
+2. **The genuine NIPS overcorrects even more than IPE under rank–sentiment
+   confounding** (bias −0.217 vs −0.176 in B; −0.205 vs −0.156 in D), because
+   pure inverse-rank propensity assigns the most extreme weights to low-ranked
+   (here negative-sentiment) comments. The engagement term in IPE partially
+   dampens this.
 3. **PACE is the least-biased weighted estimator under confounding** (−0.016 in
    B, −0.018 in D) because its exposure baseline absorbs rank/arrival variation.
    It is **nearly unbiased under pure arrival confounding** (C: −0.001).
