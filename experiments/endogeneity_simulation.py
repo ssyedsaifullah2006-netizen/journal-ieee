@@ -28,7 +28,7 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 from analyzers.consensus_framework import ConsensusEstimatorSuite, CommentRecord
 
-NAMES = ["Unweighted", "Heuristic", "NC-IPS", "PACE", "PACE-LOO"]
+NAMES = ["Unweighted", "Heuristic", "IPE", "NIPS", "PACE", "PACE-LOO"]
 
 
 def _estimates(recs):
@@ -36,7 +36,8 @@ def _estimates(recs):
     return np.array([
         s.estimate_unweighted()["consensus_score"],
         s.estimate_heuristic_log_likes()["consensus_score"],
-        s.estimate_position_ips()["consensus_score"],
+        s.estimate_position_ips()["consensus_score"],   # IPE (engagement-weighted)
+        s.estimate_normalized_ips()["consensus_score"],  # genuine normalized IPS
         s.estimate_pace()["consensus_score"],
         s.estimate_pace_loo()["consensus_score"],
     ])
@@ -148,7 +149,7 @@ def run(M=500, n=80):
     print(f"{'scenario':<24} {'estimator':<12} {'bias':>8} {'MAE':>8} {'RMSE':>8} {'SE':>8} {'95% CI (bias)'}")
     print("-" * 95)
     for name, fn in SCENARIOS.items():
-        err = np.zeros((M, 5))
+        err = np.zeros((M, 6))
         for m in range(M):
             recs, truth = fn(seed=10000 + m, n=n)
             err[m] = _estimates(recs) - truth

@@ -188,10 +188,13 @@ class ConsensusEstimatorSuite:
     # -------------------------------------------------------------
     def estimate_position_ips(self, gamma: float = 0.8, clip_percentile: float = 90.0) -> Dict[str, Any]:
         """
-        Normalized Clipped Inverse Propensity Scoring (NC-IPS, Joachims et al. 2017):
-        Propensity of visual examination: p_i = rank_i ^ (-gamma).
-        Inverse propensity weights: w_i = (1 / p_i) * log1p(likes_i).
-        Clipped at clip_percentile to prevent unbounded propensity variance.
+        Inverse-Propensity Engagement-Weighted (IPE) estimator.
+
+        NOTE: this is NOT Joachims' normalized clipped IPS. It multiplies the
+        clipped inverse-rank propensity by log1p(likes), i.e. an
+        *engagement-weighted* hybrid. The genuine normalized IPS is
+        `estimate_normalized_ips()`. This method is retained under its
+        historical name for backward compatibility and labeled IPE in outputs.
         """
         if self.n == 0:
             raise ValueError("At least one comment is required for estimation.")
@@ -204,6 +207,33 @@ class ConsensusEstimatorSuite:
         
         raw_w = clipped_inv_p * np.log1p(self.likes) + 1e-5
         norm_w = raw_w / np.sum(raw_w)
+        consensus_score = float(np.sum(norm_w * self.sentiments))
+        ess = float((np.sum(norm_w) ** 2) / np.sum(norm_w ** 2))
+        return {
+            "method": "IPE",
+            "consensus_score": consensus_score,
+            "weights": norm_w.tolist(),
+            "majority_sentiment": self._majority_class(norm_w),
+            "effective_sample_size": ess
+        }
+
+    def estimate_normalized_ips(self, gamma: float = 0.8, clip_percentile: float = 90.0) -> Dict[str, Any]:
+        """
+        Genuine Normalized Clipped IPS (Joachims et al. 2017).
+
+        Propensity of visual examination p_i = rank_i^{-gamma}. Inverse-propensity
+        weights w_i = 1/p_i, clipped at clip_percentile and normalized. The
+        consensus estimate is mu = sum(w_i s_i) / sum(w_i). No engagement (likes)
+        term is used; this is the standard normalized IPS estimator for the
+        sentiment mean.
+        """
+        if self.n == 0:
+            raise ValueError("At least one comment is required for estimation.")
+        propensity = self.ranks ** (-gamma)
+        inv_propensity = 1.0 / np.maximum(propensity, 1e-4)
+        clip_bound = np.percentile(inv_propensity, clip_percentile)
+        clipped_inv_p = np.minimum(inv_propensity, clip_bound)
+        norm_w = clipped_inv_p / np.sum(clipped_inv_p)
         consensus_score = float(np.sum(norm_w * self.sentiments))
         ess = float((np.sum(norm_w) ** 2) / np.sum(norm_w ** 2))
         return {

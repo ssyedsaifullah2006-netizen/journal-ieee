@@ -24,10 +24,11 @@ from analyzers.consensus_framework import ConsensusEstimatorSuite, CommentRecord
 def _estimators(suite):
     u = suite.estimate_unweighted()["consensus_score"]
     h = suite.estimate_heuristic_log_likes()["consensus_score"]
-    i = suite.estimate_position_ips()["consensus_score"]
+    i = suite.estimate_position_ips()["consensus_score"]   # IPE
+    n = suite.estimate_normalized_ips()["consensus_score"]  # NIPS
     p = suite.estimate_pace()["consensus_score"]
     l = suite.estimate_pace_loo()["consensus_score"]
-    return u, h, i, p, l
+    return u, h, i, n, p, l
 
 
 # ----------------------------------------------------------------------------
@@ -73,13 +74,13 @@ def run_e1(M=30):
     print("\n[E1] Engagement-distribution sensitivity (late groundswell, Y*=-0.1)")
     kinds = ["uniform", "lognormal", "powerlaw", "pareto"]
     for kind in kinds:
-        rows = np.zeros((M, 5))
+        rows = np.zeros((M, 6))
         for m in range(M):
             recs = _scenario2_like(1000 + m, kind)
             rows[m] = [abs(e - (-0.1)) for e in _estimators(ConsensusEstimatorSuite(recs))]
         mean = rows.mean(0)
         se = rows.std(0) / np.sqrt(M)
-        names = ["Unw", "Heur", "IPS", "PACE", "PACE-LOO"]
+        names = ["Unw", "Heur", "IPE", "NIPS", "PACE", "PACE-LOO"]
         line = "  ".join(f"{n}={mean[i]:.3f}±{se[i]:.3f}" for i, n in enumerate(names))
         print(f"  {kind:<9}: {line}")
 
@@ -90,7 +91,7 @@ def run_e1(M=30):
 def run_e2(M=30):
     print("\n[E2] Ranking bias: positive comments sorted to the top (Y*=true mean)")
     for corr in [0.0, 0.5, 0.9]:
-        rows = np.zeros((M, 5))
+        rows = np.zeros((M, 6))
         for m in range(M):
             rng = np.random.default_rng(2000 + m)
             n = 80
@@ -112,7 +113,7 @@ def run_e2(M=30):
             y_star = float(true_s.mean())
             rows[m] = [abs(e - y_star) for e in _estimators(ConsensusEstimatorSuite(recs))]
         mean = rows.mean(0); se = rows.std(0) / np.sqrt(M)
-        line = "  ".join(f"{n}={mean[i]:.3f}±{se[i]:.3f}" for i, n in enumerate(["Unw", "Heur", "IPS", "PACE", "PACE-LOO"]))
+        line = "  ".join(f"{n}={mean[i]:.3f}±{se[i]:.3f}" for i, n in enumerate(["Unw", "Heur", "IPE", "NIPS", "PACE", "PACE-LOO"]))
         print(f"  corr={corr:.1f}: {line}")
 
 
@@ -123,7 +124,7 @@ def run_e3(M=30):
     print("\n[E3] Sentiment measurement error (Scenario-2, Y*=-0.1)")
     from experiments.reproduce_all_experiments import generate_scenario_2_trial
     for flip in [0.0, 0.1, 0.3, 0.5]:
-        rows = np.zeros((M, 5))
+        rows = np.zeros((M, 6))
         for m in range(M):
             recs, y = generate_scenario_2_trial(3000 + m)
             if flip > 0:
@@ -135,7 +136,7 @@ def run_e3(M=30):
                                              else "negative" if r.sentiment_score <= -0.05 else "neutral")
             rows[m] = [abs(e - (-0.1)) for e in _estimators(ConsensusEstimatorSuite(recs))]
         mean = rows.mean(0); se = rows.std(0) / np.sqrt(M)
-        line = "  ".join(f"{n}={mean[i]:.3f}±{se[i]:.3f}" for i, n in enumerate(["Unw", "Heur", "IPS", "PACE", "PACE-LOO"]))
+        line = "  ".join(f"{n}={mean[i]:.3f}±{se[i]:.3f}" for i, n in enumerate(["Unw", "Heur", "IPE", "NIPS", "PACE", "PACE-LOO"]))
         print(f"  flip={flip:.1f}: {line}")
 
 
@@ -151,7 +152,7 @@ def run_e4():
         ests = _estimators(s)
         print(f"  {name}: " + "  ".join(
             f"{n}={ests[i]:.3f} (MAE {abs(ests[i]-y_star):.3f})"
-            for i, n in enumerate(["Unw", "Heur", "IPS", "PACE", "PACE-LOO"])))
+            for i, n in enumerate(["Unw", "Heur", "IPE", "NIPS", "PACE", "PACE-LOO"])))
 
     show("N=1", [CommentRecord("a", "only", 0.5, "positive", 10, 0, 1, 1.0, 0)], 0.5)
     show("N=2 balanced", [CommentRecord("a", "p", 0.5, "positive", 10, 0, 1, 1.0, 0),

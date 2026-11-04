@@ -22,3 +22,11 @@ All changes are on `research-revision`; `main` and `submission-ready` are untouc
 - Identified NC-IPS baseline as mislabeled (inverse-propensity × log-likes, not Joachims' NC-IPS)
 - Added `scotts_pi`; added `tests/test_interrater.py` (13 checks)
 - Corpus SHA-256 provenance verified; rank confirmed as retrieval-time relevance order
+
+### [latest] Genuine normalized IPS + manuscript relabeling
+- Implemented `estimate_normalized_ips()` (genuine Joachims normalized clipped IPS: inverse-rank propensity, no engagement term)
+- Retained the hybrid as IPE (`estimate_position_ips`, now labeled "IPE" in outputs)
+- Endogeneity + expanded simulations now compare 6 estimators (Unw, Heur, IPE, NIPS, PACE, PACE-LOO)
+- Key finding: genuine NIPS overcorrects more than IPE under rank–sentiment confounding (bias −0.217 vs −0.176; PACE −0.016)
+- Manuscript: relabeled NC-IPS→IPE, added NIPS baseline, updated robustness subsection with endogeneity_simulation.py (M=500) results
+- PDF: NOT compiled (no TeX distribution in sandbox and install is blocked); paper.tex validated structurally (QA 22/22, environment balance clean, citations resolve)
