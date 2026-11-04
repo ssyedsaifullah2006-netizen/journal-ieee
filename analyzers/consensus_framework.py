@@ -39,6 +39,70 @@ def exposure_surface_model(X, alpha, gamma, lambda_decay):
     return alpha * (safe_rank ** (-gamma)) * ((1.0 + safe_arrival) ** (-lambda_decay))
 
 
+def ols_inference(X, y, beta, residuals):
+    """Compute OLS inference diagnostics for the log-linear exposure fit.
+
+    Returns standard errors, t-statistics, R^2, a Breusch-Pagan
+    heteroscedasticity test on the log-scale residuals, the design condition
+    number, and variance inflation factors for the (non-intercept) predictors.
+
+    Never raises; on failure fills NaN.
+    """
+    n, p = X.shape
+    rss = float(np.sum(residuals ** 2))
+    dof = n - p
+    sigma2 = rss / dof if dof > 0 else float("nan")
+
+    try:
+        cov = sigma2 * np.linalg.inv(X.T @ X)
+        se = np.sqrt(np.clip(np.diag(cov), 0.0, None))
+    except np.linalg.LinAlgError:
+        se = np.full(p, float("nan"))
+    se = np.asarray(se, dtype=float)
+    t = beta / np.where(se > 0, se, float("nan"))
+
+    ss_tot = float(np.sum((y - np.mean(y)) ** 2))
+    r2 = 1.0 - rss / ss_tot if ss_tot > 0 else float("nan")
+
+    # Breusch-Pagan heteroscedasticity test (auxiliary regression of e^2 on X)
+    e2 = residuals ** 2
+    try:
+        from scipy import stats as _stats
+        aux_beta, *_ = np.linalg.lstsq(X, e2, rcond=None)
+        e2_hat = X @ aux_beta
+        ss_aux_tot = float(np.sum((e2 - np.mean(e2)) ** 2))
+        r2_aux = 1.0 - float(np.sum((e2 - e2_hat) ** 2)) / ss_aux_tot if ss_aux_tot > 0 else 0.0
+        bp_stat = float(n * r2_aux)
+        bp_p = float(1.0 - _stats.chi2.cdf(bp_stat, df=p - 1)) if p > 1 else float("nan")
+    except Exception:
+        bp_stat = float("nan")
+        bp_p = float("nan")
+
+    cond = float(np.linalg.cond(X))
+    vifs = []
+    for j in range(1, p):
+        Xj = X[:, j]
+        X_other = np.delete(X, j, axis=1)
+        try:
+            bj, *_ = np.linalg.lstsq(X_other, Xj, rcond=None)
+            ssj_tot = float(np.sum((Xj - np.mean(Xj)) ** 2))
+            r2j = 1.0 - float(np.sum((Xj - X_other @ bj) ** 2)) / ssj_tot if ssj_tot > 0 else 0.0
+            vifs.append(float(1.0 / (1.0 - r2j)) if r2j < 1.0 else float("inf"))
+        except Exception:
+            vifs.append(float("nan"))
+
+    return {
+        "beta_se": [float(v) for v in se],
+        "beta_t": [float(v) for v in t],
+        "residual_dof": int(dof),
+        "log_scale_r_squared": float(r2),
+        "breusch_pagan_stat": float(bp_stat),
+        "breusch_pagan_p": float(bp_p),
+        "design_condition_number": float(cond),
+        "vif_rank_arrival": [float(v) for v in vifs],
+    }
+
+
 class ConsensusEstimatorSuite:
     """
     Comparative suite that runs all 4 methods side-by-side on the same comment stream.
@@ -148,6 +212,7 @@ class ConsensusEstimatorSuite:
         log_ranks = np.log(self.ranks)
         log_arrivals = np.log1p(self.arrivals)
         X_mat = np.column_stack([np.ones(self.n), log_ranks, log_arrivals])
+        inference = None
 
         try:
             # Closed-form Ordinary Least Squares
@@ -157,6 +222,7 @@ class ConsensusEstimatorSuite:
             # Fitted log values and OLS residuals
             log_fitted = X_mat @ beta
             ols_residuals = log_likes - log_fitted
+            inference = ols_inference(X_mat, log_likes, beta, ols_residuals)
 
             # Duan's smearing factor: compensates for E[exp(eps)] >= 1 under Jensen's inequality
             duan_smearing_factor = float(np.mean(np.exp(ols_residuals)))
@@ -219,6 +285,7 @@ class ConsensusEstimatorSuite:
                 "expected_likes_total": expected_total,
                 "expected_to_observed_ratio": calibration_ratio,
                 "log_scale_r_squared": log_scale_r_squared,
+                "inference": inference,
                 "warning": (
                     "Observed rank is a retrieval-time proxy, not historical exposure; "
                     "do not interpret this fit causally."
@@ -229,6 +296,46 @@ class ConsensusEstimatorSuite:
     # -------------------------------------------------------------
     # Comprehensive Comparative Evaluation
     # -------------------------------------------------------------
+    def estimate_pace_loo(self) -> Dict[str, Any]:
+        """PACE with leave-one-out (PRESS) residuals (diagnostic variant).
+
+        Replaces in-sample OLS residuals with exact LOO residuals e_i/(1-h_ii)
+        when forming the Duan smearing factor, reducing in-sample optimism of
+        the exposure baseline. Does NOT replace estimate_pace; used for
+        comparison and sensitivity reporting.
+        """
+        if self.n < 5:
+            return self.estimate_unweighted()
+        log_likes = np.log1p(self.likes)
+        log_ranks = np.log(self.ranks)
+        log_arrivals = np.log1p(self.arrivals)
+        X = np.column_stack([np.ones(self.n), log_ranks, log_arrivals])
+        try:
+            beta, *_ = np.linalg.lstsq(X, log_likes, rcond=None)
+            fitted = X @ beta
+            resid = log_likes - fitted
+            H = X @ np.linalg.inv(X.T @ X) @ X.T
+            h = np.clip(np.diag(H), 0.0, 1.0 - 1e-12)
+            loo_resid = resid / (1.0 - h)
+            smear = float(np.mean(np.exp(loo_resid)))
+            expected = np.maximum(0.0, smear * np.exp(fitted) - 1.0)
+        except np.linalg.LinAlgError:
+            return self.estimate_pace()
+
+        residuals = self.likes - expected
+        med = np.median(residuals)
+        mad = np.median(np.abs(residuals - med)) + 1e-6
+        z = np.clip((residuals - med) / (1.4826 * mad), -20.0, 20.0)
+        w = 1.0 / (1.0 + np.exp(-z)) * (0.8 ** self.depths)
+        w = w / np.sum(w)
+        return {
+            "method": "PACE-LOO (diagnostic)",
+            "consensus_score": float(np.sum(w * self.sentiments)),
+            "weights": w.tolist(),
+            "effective_sample_size": float(1.0 / np.sum(w ** 2)),
+            "duan_smearing_factor_loo": float(smear),
+        }
+
     def run_all_and_compare(self, random_seed: int | None = None) -> Dict[str, Any]:
         """Runs all 4 methods and performs statistical comparative analysis."""
         m1 = self.estimate_unweighted()
