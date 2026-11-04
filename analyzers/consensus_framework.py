@@ -393,32 +393,35 @@ class ConsensusEstimatorSuite:
         }
 
     def run_all_and_compare(self, random_seed: int | None = None) -> Dict[str, Any]:
-        """Runs all 4 methods and performs statistical comparative analysis."""
+        """Runs all 5 methods (Unweighted, Heuristic, IPE, NIPS, PACE) with
+        bootstrap CIs, leave-top-10% robustness, and permutation divergence tests."""
         m1 = self.estimate_unweighted()
         m2 = self.estimate_heuristic_log_likes()
-        m3 = self.estimate_position_ips()
-        m4 = self.estimate_pace()
+        m3 = self.estimate_position_ips()      # IPE (engagement-weighted hybrid)
+        m4 = self.estimate_normalized_ips()    # genuine normalized IPS
+        m5 = self.estimate_pace()
 
-        # Compute 95% full-pipeline refitting bootstrap confidence intervals
         seed = self.random_seed if random_seed is None else random_seed
-        for index, (m_key, m_val) in enumerate([("UnweightedMean", m1), ("HeuristicLogLikes", m2), ("PositionDebiasedIPS", m3), ("PACE_Proposed", m4)]):
+        methods = [
+            ("UnweightedMean", m1),
+            ("HeuristicLogLikes", m2),
+            ("IPE", m3),
+            ("NormalizedIPS", m4),
+            ("PACE_Proposed", m5),
+        ]
+        for index, (m_key, m_val) in enumerate(methods):
             m_val["bootstrap_ci_95"] = self.compute_full_pipeline_bootstrap_ci(
                 method=m_key, n_bootstraps=200, random_seed=seed + index
             )
 
-        results = {
-            "UnweightedMean": m1,
-            "HeuristicLogLikes": m2,
-            "PositionDebiasedIPS": m3,
-            "PACE_Proposed": m4
-        }
+        results = {k: v for k, v in methods}
 
-        # Compute robustness: Leave-Top-K-Out for top 10%
         robustness_scores = self._evaluate_robustness()
 
-        # Compute Permutation Test: Is PACE significantly different from Unweighted / Heuristic?
-        p_val_pace_vs_raw = self._permutation_divergence_test(np.array(m4["weights"]), np.array(m1["weights"]), random_seed=seed + 10)
-        p_val_pace_vs_heur = self._permutation_divergence_test(np.array(m4["weights"]), np.array(m2["weights"]), random_seed=seed + 11)
+        p_val_pace_vs_raw = self._permutation_divergence_test(np.array(m5["weights"]), np.array(m1["weights"]), random_seed=seed + 10)
+        p_val_pace_vs_heur = self._permutation_divergence_test(np.array(m5["weights"]), np.array(m2["weights"]), random_seed=seed + 11)
+        p_val_pace_vs_ipe = self._permutation_divergence_test(np.array(m5["weights"]), np.array(m3["weights"]), random_seed=seed + 12)
+        p_val_pace_vs_nips = self._permutation_divergence_test(np.array(m5["weights"]), np.array(m4["weights"]), random_seed=seed + 13)
 
         return {
             "num_comments": self.n,
@@ -427,6 +430,8 @@ class ConsensusEstimatorSuite:
             "significance_tests": {
                 "pace_vs_unweighted_p_value": p_val_pace_vs_raw,
                 "pace_vs_heuristic_p_value": p_val_pace_vs_heur,
+                "pace_vs_ipe_p_value": p_val_pace_vs_ipe,
+                "pace_vs_nips_p_value": p_val_pace_vs_nips,
             }
         }
 
@@ -507,8 +512,10 @@ class ConsensusEstimatorSuite:
                 score = boot_suite.estimate_pace()["consensus_score"]
             elif method == "HeuristicLogLikes":
                 score = boot_suite.estimate_heuristic_log_likes()["consensus_score"]
-            elif method == "PositionDebiasedIPS":
+            elif method == "IPE":
                 score = boot_suite.estimate_position_ips()["consensus_score"]
+            elif method == "NormalizedIPS":
+                score = boot_suite.estimate_normalized_ips()["consensus_score"]
             else:
                 score = boot_suite.estimate_unweighted()["consensus_score"]
 

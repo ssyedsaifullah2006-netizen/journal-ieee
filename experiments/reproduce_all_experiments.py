@@ -114,6 +114,7 @@ def run_full_reproduction(n_trials: int = 50):
         mae_unw_list = []
         mae_heur_list = []
         mae_ips_list = []
+        mae_nips_list = []
         mae_pace_list = []
         
         w_max_heur_list = []
@@ -133,13 +134,15 @@ def run_full_reproduction(n_trials: int = 50):
 
             m_unw = suite.estimate_unweighted()
             m_heur = suite.estimate_heuristic_log_likes()
-            m_ips = suite.estimate_position_ips()
+            m_ips = suite.estimate_position_ips()      # IPE
+            m_nips = suite.estimate_normalized_ips()   # genuine NIPS
             m_pace = suite.estimate_pace()
             rob = suite._evaluate_robustness()
 
             mae_unw = abs(m_unw["consensus_score"] - y_star)
             mae_heur = abs(m_heur["consensus_score"] - y_star)
             mae_ips = abs(m_ips["consensus_score"] - y_star)
+            mae_nips = abs(m_nips["consensus_score"] - y_star)
             mae_pace = abs(m_pace["consensus_score"] - y_star)
 
             w_max_h = float(np.max(m_heur["weights"]))
@@ -158,8 +161,10 @@ def run_full_reproduction(n_trials: int = 50):
                 "unweighted_mae": round(mae_unw, 4),
                 "heuristic_estimate": round(m_heur["consensus_score"], 4),
                 "heuristic_mae": round(mae_heur, 4),
-                "nc_ips_estimate": round(m_ips["consensus_score"], 4),
-                "nc_ips_mae": round(mae_ips, 4),
+                "nc_ips_estimate": round(m_ips["consensus_score"], 4),  # IPE
+                "nc_ips_mae": round(mae_ips, 4),                        # IPE
+                "nips_estimate": round(m_nips["consensus_score"], 4),
+                "nips_mae": round(mae_nips, 4),
                 "pace_estimate": round(m_pace["consensus_score"], 4),
                 "pace_mae": round(mae_pace, 4),
                 "heuristic_w_max": round(w_max_h, 4),
@@ -172,6 +177,7 @@ def run_full_reproduction(n_trials: int = 50):
             mae_unw_list.append(mae_unw)
             mae_heur_list.append(mae_heur)
             mae_ips_list.append(mae_ips)
+            mae_nips_list.append(mae_nips)
             mae_pace_list.append(mae_pace)
             w_max_heur_list.append(w_max_h)
             w_max_pace_list.append(w_max_p)
@@ -249,7 +255,8 @@ def run_full_reproduction(n_trials: int = 50):
             "Ground Truth Y*": y_star,
             "Unweighted MAE": f"{np.mean(mae_unw_list):.3f} +/- {np.std(mae_unw_list)/np.sqrt(n_trials):.3f}",
             "Heuristic MAE": f"{np.mean(mae_heur_list):.3f} +/- {np.std(mae_heur_list)/np.sqrt(n_trials):.3f}",
-            "NC-IPS MAE": f"{np.mean(mae_ips_list):.3f} +/- {np.std(mae_ips_list)/np.sqrt(n_trials):.3f}",
+            "IPE MAE": f"{np.mean(mae_ips_list):.3f} +/- {np.std(mae_ips_list)/np.sqrt(n_trials):.3f}",
+            "NIPS MAE": f"{np.mean(mae_nips_list):.3f} +/- {np.std(mae_nips_list)/np.sqrt(n_trials):.3f}",
             "PACE MAE": f"{np.mean(mae_pace_list):.3f} +/- {np.std(mae_pace_list)/np.sqrt(n_trials):.3f}",
             "Paired Wilcoxon p-val": f"{p_val_mae:.5f}",
             "Heuristic w_max*": f"{np.mean(w_max_heur_list):.3f}",
@@ -286,7 +293,8 @@ def run_full_reproduction(n_trials: int = 50):
     yt_suite = ConsensusEstimatorSuite(yt_comments)
     yt_unw = yt_suite.estimate_unweighted()
     yt_heur = yt_suite.estimate_heuristic_log_likes()
-    yt_ips = yt_suite.estimate_position_ips()
+    yt_ips = yt_suite.estimate_position_ips()       # IPE
+    yt_nips = yt_suite.estimate_normalized_ips()   # genuine NIPS
     yt_pace = yt_suite.estimate_pace()
     yt_rob = yt_suite._evaluate_robustness()
 
@@ -300,7 +308,8 @@ def run_full_reproduction(n_trials: int = 50):
         "Ground Truth Y*": "Observational",
         "Unweighted MAE": f"{yt_unw['consensus_score']:.3f} (mu)",
         "Heuristic MAE": f"{yt_heur['consensus_score']:.3f} [{heur_ci[0]:.2f}, {heur_ci[1]:.2f}]",
-        "NC-IPS MAE": f"{yt_ips['consensus_score']:.3f} (mu)",
+        "IPE MAE": f"{yt_ips['consensus_score']:.3f} (mu)",
+        "NIPS MAE": f"{yt_nips['consensus_score']:.3f} (mu)",
         "PACE MAE": f"{yt_pace['consensus_score']:.3f} [{pace_ci[0]:.2f}, {pace_ci[1]:.2f}]",
         "Paired Wilcoxon p-val": "N/A (Observational)",
         "Heuristic w_max*": f"{np.max(yt_heur['weights']):.3f}",
