@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "source_platform": "YouTube Data API v3",
+  "retrieved_at_utc": "2026-11-04T13:33:06.243349+00:00",
+  "collection_method": "youtube.commentThreads.list(order=relevance, top-level comments only)",
+  "ranking_interpretation": "retrieval-time relevance order; not historical display rank",
+  "sentiment_method": "NLTK VADER compound score; thresholds +/-0.05",
+  "videos": [
+    {
+      "label": "rick_astley_meme",
+      "video_id": "dQw4w9WgXcQ",
+      "video_title": "Rick Astley - Never Gonna Give You Up",
+      "published_at_utc": "2009-10-25T06:57:33+00:00",
+      "csv_file": "multivideo_rick_astley_meme.csv",
+      "csv_sha256": "8a019bac959b7eac48d3c7dc62a9bf7f816b5bb467cbacfe1384bf12b44acb7a",
+      "n_comments": 100
+    },
+    {
+      "label": "smartphone_30k",
+      "video_id": "Jf_Sz27I458",
+      "video_title": "I Tested This \u20b930,000 Phone - Because of You !",
+      "published_at_utc": "2026-11-03T16:06:25Z",
+      "csv_file": "multivideo_smartphone_30k.csv",
+      "csv_sha256": "9c61469761fa056498f7301e4fb6af19f772ccda8cc81f30b11b4ba63dd20421",
+      "n_comments": 100
+    },
+    {
+      "label": "iphone_review",
+      "video_id": "OMZ_HLTJZRQ",
+      "video_title": "iPhone Duo \u2013 1 Week Later: An HONEST Review",
+      "published_at_utc": "2026-10-28T21:55:29Z",
+      "csv_file": "multivideo_iphone_review.csv",
+      "csv_sha256": "3e9fa809f6138183bec44a80a0dda28342f323cc5ba56a030cb8eef282c6d594",
+      "n_comments": 100
+    },
+    {
+      "label": "thin_device_reveal",
+      "video_id": "LZYfSYXY-go",
+      "video_title": "Apple\u2019s THINNEST ever device is RIDICULOUS!",
+      "published_at_utc": "2024-01-04T15:32:23Z",
+      "csv_file": "multivideo_thin_device_reveal.csv",
+      "csv_sha256": "4673711848057f29779d73fb42ae792a508240c0f78d7a6cf10995ac433b460f",
+      "n_comments": 100
+    }
+  ]
+}

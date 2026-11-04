@@ -20,7 +20,7 @@
 \author{Syed~Saifullah~S and Harish~S%
 \thanks{Syed Saifullah S and Harish S are with the School of Computer Science Engineering and Information Systems (SCORE), Vellore Institute of Technology (VIT), Vellore, Tamil Nadu 632014, India (e-mail: syedsaifullah.s2024@vitstudent.ac.in). Corresponding author: Syed Saifullah S.}}
 
-\markboth{IEEE Transactions on Computational Social Systems,~Vol.~XX, No.~X, Month~2026}%
+\markboth{IEEE Transactions on Computational Social Systems}%
 {Saifullah and Harish: Semantic Reliability and Exposure-Conditioned Consensus Estimation}
 
 \maketitle
@@ -367,17 +367,17 @@ To test whether the single-corpus observations generalize beyond one meme-domina
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{lcccccccc}
 \toprule
-\textbf{Video} & \textbf{Pos} & \textbf{Neu} & \textbf{Neg} & \textbf{Zero} & $\hat{\mu}_{\text{unw}}$ & $\hat{\mu}_{\text{heur}}$ & $\hat{\mu}_{\text{IPS}}$ & $\hat{\mu}_{\text{PACE}}$ \\
+\textbf{Video} & \textbf{Pos} & \textbf{Neu} & \textbf{Neg} & \textbf{Zero} & $\hat{\mu}_{\text{unw}}$ & $\hat{\mu}_{\text{heur}}$ & $\hat{\mu}_{\text{IPE}}$ & $\hat{\mu}_{\text{PACE}}$ \\
 \midrule
 Rick Astley (meme) & 37 & 47 & 16 & 46\% & $+0.114$ & $+0.123$ & $+0.116$ & $+0.079$ \\
-Budget smartphone  & 43 & 48 & 9  & 47\% & $+0.169$ & $+0.162$ & $+0.174$ & $+0.192$ \\
-iPhone review      & 72 & 11 & 17 & 11\% & $+0.376$ & $+0.412$ & $+0.409$ & $+0.350$ \\
-Thin-device reveal & 31 & 50 & 19 & 50\% & $+0.085$ & $+0.059$ & $+0.075$ & $+0.067$ \\
+Budget smartphone  & 43 & 47 & 10 & 46\% & $+0.159$ & $+0.151$ & $+0.157$ & $+0.167$ \\
+iPhone review      & 72 & 11 & 17 & 11\% & $+0.376$ & $+0.412$ & $+0.408$ & $+0.350$ \\
+Thin-device reveal & 31 & 50 & 19 & 50\% & $+0.086$ & $+0.059$ & $+0.076$ & $+0.067$ \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
-Two patterns emerge. First, \textbf{VADER zero-inflation is strongly domain-dependent}: it ranges from 11\% on the emotionally charged iPhone review to 46--50\% on the remaining videos, demonstrating that the 46\% zero-inflation measured on the Rick Astley corpus is not a single-video artifact but a recurring property of informal praise that the lexicon scores as exactly neutral. Second, \textbf{the ordering of the four estimators is inconsistent across videos}: on the iPhone review PACE yields the lowest estimate ($+0.350$) while the heuristic yields the highest ($+0.412$), whereas on the smartphone review PACE yields the highest ($+0.192$) and the heuristic the lowest ($+0.162$). No estimator is uniformly more extreme or more conservative, corroborating on independent data the conclusion that exposure-conditioned weighting is a sensitive diagnostic rather than a universal correction. This extension is observational and lexicon-scored only; the human-annotated accuracy audit of Table~\ref{tab:lexicon} remains restricted to the Rick Astley corpus.
+Two patterns emerge. First, \textbf{VADER zero-inflation is strongly domain-dependent}: it ranges from 11\% on the emotionally charged iPhone review to 46--50\% on the remaining videos, demonstrating that the 46\% zero-inflation measured on the Rick Astley corpus is not a single-video artifact but a recurring property of informal praise that the lexicon scores as exactly neutral. Second, \textbf{the ordering of the four estimators is inconsistent across videos}: on the iPhone review PACE yields the lowest estimate ($+0.350$) while the heuristic yields the highest ($+0.412$), whereas on the smartphone review PACE yields the highest ($+0.167$) and the heuristic the lowest ($+0.151$). No estimator is uniformly more extreme or more conservative, corroborating on independent data the conclusion that exposure-conditioned weighting is a sensitive diagnostic rather than a universal correction. This extension is observational and lexicon-scored only; the human-annotated accuracy audit of Table~\ref{tab:lexicon} remains restricted to the Rick Astley corpus.
 
 \subsection{Synthetic Robustness Across Distributions, Ranking Bias, and Measurement Error}
 To bound the generalizability of the Scenario-2 result, we run additional controlled families. \emph{(i) Engagement distribution} (\path{experiments/expand_simulations.py}, $M = 30$): PACE's advantage over the heuristic persists but \emph{shrinks} as likes become heavier-tailed (MAE $0.012$ under uniform vs.\ $0.057$ under Pareto), so the gain is not distribution-robust. \emph{(ii) Ranking endogeneity} (\path{experiments/endogeneity_simulation.py}, $M = 500$, seven DGPs with independent rank/arrival/sentiment controls): the unweighted mean is unbiased (bias $0.000$) for the participant-mean estimand in every scenario; under rank--sentiment confounding the heuristic is positively biased ($+0.059$), IPE overcorrects ($-0.176$), the genuine NIPS overcorrects further ($-0.217$), and PACE is the least biased weighted estimator ($-0.016$). \emph{(iii) Sentiment measurement error}: under 10--30\% label flips, IPE/NIPS are the most robust estimators and PACE degrades substantially; at 50\% noise all estimators converge to the unweighted error. These results reinforce that PACE's conditional advantage is scenario- and measurement-specific and must not be overgeneralized.

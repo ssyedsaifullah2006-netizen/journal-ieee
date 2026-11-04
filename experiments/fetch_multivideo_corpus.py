@@ -95,22 +95,36 @@ def main():
     summary_rows = []
     manifest_videos = []
 
+    import pandas as _pd
     for vid, label in VIDEOS:
-        print(f"\n[{label}] fetching {MAX_COMMENTS} comments from {vid} ...")
-        published, title, ccount = get_meta(vid)
-        pub_dt = datetime.fromisoformat(published.replace("Z", "+00:00"))
-        comments = fetch_comments(vid, MAX_COMMENTS)
-        comments = score_vader(comments)
-
-        records = []
-        for i, c in enumerate(comments):
-            cd = datetime.fromisoformat(c["timestamp"].replace("Z", "+00:00"))
-            arr = max(0.0, (cd - pub_dt).total_seconds() / 3600.0)
-            c["rank"] = i + 1
-            c["arrival_hours"] = round(arr, 2)
-            records.append(CommentRecord(
-                c["comment_id"], c["text"], c["sentiment_score"], c["sentiment_label"],
-                max(0, int(c["likes"])), int(c["replies"]), i + 1, arr, 0))
+        if label == "rick_astley_meme":
+            # Reuse the dated 2026-10-30 corpus (human-labeled, with provenance)
+            # rather than re-fetching, to stay consistent with Tables I/III.
+            _df = _pd.read_csv(ROOT / "data" / "youtube_corpus_100_comments.csv")
+            comments = _df.to_dict("records")
+            title = "Rick Astley - Never Gonna Give You Up"
+            ccount = len(comments)
+            published = "2009-10-25T06:57:33+00:00"  # from the 2026-10-30 provenance
+            records = [CommentRecord(str(c["comment_id"]), str(c["text"]),
+                                     float(c["sentiment_score"]), str(c["sentiment_label"]),
+                                     max(0, int(c["likes"])), int(c["replies"]),
+                                     int(c["rank"]), float(c["arrival_hours"]), 0)
+                       for c in comments]
+        else:
+            print(f"\n[{label}] fetching {MAX_COMMENTS} comments from {vid} ...")
+            published, title, ccount = get_meta(vid)
+            pub_dt = datetime.fromisoformat(published.replace("Z", "+00:00"))
+            comments = fetch_comments(vid, MAX_COMMENTS)
+            comments = score_vader(comments)
+            records = []
+            for i, c in enumerate(comments):
+                cd = datetime.fromisoformat(c["timestamp"].replace("Z", "+00:00"))
+                arr = max(0.0, (cd - pub_dt).total_seconds() / 3600.0)
+                c["rank"] = i + 1
+                c["arrival_hours"] = round(arr, 2)
+                records.append(CommentRecord(
+                    c["comment_id"], c["text"], c["sentiment_score"], c["sentiment_label"],
+                    max(0, int(c["likes"])), int(c["replies"]), i + 1, arr, 0))
 
         suite = ConsensusEstimatorSuite(records)
         u = suite.estimate_unweighted()
