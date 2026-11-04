@@ -347,7 +347,7 @@ async def api_fetch(req: FetchRequest):
         # 4. Build index AFTER analysis completes (sequential, not parallel)
         #    This avoids hammering the API with generation + embedding simultaneously
         def _background_index():
-            _build_index(sorted_comments, req.session_id, session)
+            _build_index(comments, req.session_id, session)
 
         loop.run_in_executor(executor, _background_index)
 

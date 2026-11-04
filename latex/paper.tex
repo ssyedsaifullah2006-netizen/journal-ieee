@@ -15,26 +15,26 @@
 
 \begin{document}
 
-\title{Exposure-Conditioned Consensus Estimation in Ranked Social Discussion Streams: Sensitivity, Endogeneity, and Empirical Auditing}
+\title{Semantic Reliability and Exposure-Conditioned Consensus Estimation in Ranked Social Discussion Streams: Sensitivity, Endogeneity, and Empirical Auditing}
 
 \author{Syed~Saifullah~S and Harish~S%
 \thanks{Syed Saifullah S and Harish S are with the Department of Artificial Intelligence and Data Science, School of Computer Science and Engineering (SCOPE), Vellore Institute of Technology (VIT), Vellore, Tamil Nadu 632014, India (e-mail: sayed.saifullah2023@vitstudent.ac.in). Corresponding author: Syed Saifullah S.}}
 
 \markboth{IEEE Transactions on Computational Social Systems,~Vol.~XX, No.~X, Month~2026}%
-{Saifullah and Harish: Exposure-Conditioned Consensus Estimation: Sensitivity, Endogeneity, and Empirical Auditing}
+{Saifullah and Harish: Semantic Reliability and Exposure-Conditioned Consensus Estimation}
 
 \maketitle
 
 \begin{abstract}
-Automated sentiment aggregation over ranked social media discussion feeds (e.g., YouTube comment sections) is widely used to evaluate collective reception regarding public events, media releases, and consumer products. However, observational discussion streams suffer from acute visibility distortions: early-arriving and algorithmically prioritized comments receive disproportionate visual exposure, accumulating thousands of upvotes independently of broad community endorsement. Naive arithmetic averaging assigns equal weight to all comments regardless of reception, while common engagement-weighted heuristics ($w_i \propto \ln(1 + \text{likes}_i)$) inadvertently amplify position and temporal exposure biases by rewarding the earliest commenters. 
+Automated sentiment aggregation over ranked social media discussion feeds (e.g., YouTube comment sections) is widely used to evaluate collective reception regarding public events, media releases, and consumer products. The reliability of such estimates is governed by two independent layers. The \textbf{semantic layer} must map informal, idiomatic, and meme-laden text to a polarity valence; the \textbf{exposure layer} determines which comments are seen, because early-arriving and algorithmically prioritized comments accumulate visibility and endorsement independently of broad community agreement. Standard pipelines typically trust both layers without empirical auditing.
 
-In this paper, we present an empirical investigation and diagnostic framework for exposure-conditioned consensus estimation in ranked discussion streams. We formulate \textbf{PACE (Preferential-Attachment Corrected Endorsement)}, which models expected engagement as an empirical function of display rank ($r_i$) and temporal arrival offset ($\Delta t_i$). PACE incorporates \textbf{Duan's smearing retransformation factor} to correct for log-linear retransformation bias under homoscedastic error assumptions, isolating the \textbf{Exposure-Conditioned Engagement Residual} ($\delta_i = L_i - \hat{\mathbb{E}}[L_i \mid r_i, \Delta t_i]$), which is mapped through a robust sigmoidal weighting function.
+In this paper we audit both layers and introduce an exposure-conditioned estimator. On the semantic layer, we manually annotate a dated, API-provenanced YouTube corpus ($N = 100$, \texttt{dQw4w9WgXcQ}) and show that the widely used VADER lexicon attains only 65.0\% accuracy and 0.5307 macro-F1, with 46\% zero-inflation, a 23.9\% rate of positive comments misclassified as negative, and a 12.5\% negative-class precision. On the exposure layer, we formulate \textbf{PACE (Preferential-Attachment Corrected Endorsement)}, which models expected engagement as an empirical function of display rank ($r_i$) and arrival delay ($\Delta t_i$), applies \textbf{Duan's smearing retransformation} to correct log-linear retransformation bias, and isolates the \textbf{Exposure-Conditioned Engagement Residual} ($\delta_i = L_i - \hat{\mathbb{E}}[L_i \mid r_i, \Delta t_i]$) through robust sigmoidal gating.
 
-Through deterministic Monte Carlo simulations ($M = 50$ trials per scenario), component ablations, and systematic sensitivity audits, we show that consensus weighting is highly sensitive to estimand definitions and baseline specifications. While PACE reduces MAE relative to heuristic weighting in pre-specified settings (e.g., $0.010 \pm 0.001$ vs. $0.107 \pm 0.001$ when targeting a late-emerging groundswell), its advantage vanishes or reverses when targeting overall participant means or symmetric consensus. On a real-world YouTube corpus ($N = 100$, \texttt{dQw4w9WgXcQ}) with contemporaneous API provenance, we provide a single-annotator manual audit (all 100 comments) indicating that rule-based sentiment lexicons exhibit 46\% zero-inflation and misclassify 24\% of positive comments as negative (overall accuracy 65.0\%, macro F1 0.5307). Furthermore, all four estimators remain statistically indistinguishable on real data ($p = 0.366$). Accordingly, we report descriptive diagnostics for observational data, not real-world accuracy or causal claims. We conclude that exposure-conditioned weighting must be treated as a sensitive diagnostic rather than a universal correction, and release our complete audit suite and data for reproducibility.
+Through deterministic Monte Carlo simulations ($M = 50$ trials per scenario), component ablations, and systematic sensitivity audits, we show that consensus weighting is highly sensitive to estimand definitions and baseline specifications: PACE reduces MAE relative to heuristic weighting in pre-specified settings (e.g., $0.010 \pm 0.001$ vs. $0.107 \pm 0.001$ when targeting a late-emerging groundswell), but its advantage vanishes or reverses when targeting overall participant means or symmetric consensus. On real data, all four estimators remain statistically indistinguishable ($p = 0.366$). We conclude that both the semantic and exposure layers must be treated as auditable diagnostics rather than trusted components, and release our complete audit suite and data for reproducibility.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Position Bias, Temporal Exposure Decay, Sentiment Aggregation, Opinion Mining, Robust Estimation, Social Discussion Streams.
+Position Bias, Temporal Exposure Decay, Sentiment Aggregation, Lexicon Reliability, Semantic Analysis, Robust Estimation, Social Discussion Streams.
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -65,10 +65,11 @@ We define our target estimand as the \textbf{Engagement-Adjusted Consensus among
 \subsection{Key Contributions}
 The main contributions of this work are summarized as follows:
 \begin{itemize}
+    \item \textbf{Semantic Reliability Audit of Rule-Based Lexicons:} We annotate all 100 comments of a dated, API-provenanced YouTube snapshot and quantify VADER's degradation on informal discourse, reporting per-class precision/recall/$F_1$ (Table~\ref{tab:lexicon}), 65.0\% overall accuracy, 0.5307 macro-F1, 46\% zero-inflation, and a 23.9\% positive-to-negative misclassification rate driven by slang, idiomatic negation, and lyric quotation.
     \item \textbf{Exposure-Conditioned Baseline Model:} We formalize expected comment engagement $\mathbb{E}[L_i \mid r_i, \Delta t_i]$ via a closed-form log-linear regression combined with Duan's smearing retransformation factor \cite{duan1983smearing} to correct for retransformation bias under stated error assumptions.
     \item \textbf{Exposure-Conditioned Engagement Residuals \& Weight Auditing:} We define the residual $\delta_i$ to quantify whether a comment overperformed or underperformed relative to its exposure opportunity. Rather than asserting theoretical non-domination, we evaluate weight concentration empirically via the Maximum Normalized Weight Share ($w_{\max}^* = w_{\max} / \sum w_i$) and the Effective Sample Size (ESS).
     \item \textbf{Replicated Multi-Trial Validation ($M=50$) and Sensitivity Analysis:} We evaluate PACE against three established baselines across $M=50$ independent simulation trials per scenario, reporting Paired Wilcoxon Signed-Rank Tests \cite{wilcoxon1945individual} on Mean Absolute Error (MAE), top-10\% pruning stability, a component ablation study, and an open ground-truth sensitivity analysis mapping performance across diverse target specifications.
-    \item \textbf{Observational Case Study \& Diagnostic Audit:} We apply the method to a dated $N=100$ YouTube snapshot with SHA-256 provenance, reporting descriptive weight diagnostics and systematically auditing practical constraints including ranking endogeneity, rule-based lexicon zero-inflation, and baseline scale sensitivity.
+    \item \textbf{Observational Case Study \& Diagnostic Audit:} We apply the method to dated YouTube snapshots across four domains ($N = 100$ each) with SHA-256 provenance, reporting descriptive weight diagnostics and systematically auditing practical constraints including ranking endogeneity, rule-based lexicon zero-inflation, and baseline scale sensitivity.
 \end{itemize}
 
 \section{Related Work}
@@ -84,6 +85,9 @@ The ``spiral of silence'' theory introduced by Noelle-Neumann \cite{noelle1974sp
 
 \subsection{Robust Estimation in Social Feedback}
 Social interaction distributions exhibit heavy tails and vulnerability to strategic manipulation \cite{muchnik2013social, borghol2012untold}. Classic robust statistics provide M-estimators and bounded-influence influence functions to limit the damage of arbitrary contamination \cite{huber1981robust, hampel1986robust, rousseeuw1993alternatives}. PACE builds upon these principles by standardizing residuals via the Median Absolute Deviation (MAD) and passing them through a sigmoidal transfer function. For aspect-level and fine-grained sentiment benchmarks, the SemEval shared tasks \cite{pontiki2016semeval} have established evaluation protocols that inform how sentiment classifiers are assessed.
+
+\subsection{Rule-Based Lexicons versus Neural Sentiment Models}
+Rule-based lexicons such as VADER \cite{hutto2014vader} and SentiStrength \cite{thelwall2010sentiment} remain widespread for social media sentiment because they are deterministic, dependency-light, and interpretable. They are, however, known to degrade on informal text, where negations, slang, emoticons, irony, and dialect shift the polarity signal in ways that hand-crafted lexicons capture poorly \cite{thelwall2018social}. Pretrained neural models---including BERT \cite{devlin2019bert} and Twitter-adapted variants trained on social media corpora \cite{barbieri2020tweeteval}---attain markedly higher accuracy on informal sentiment benchmarks, at the cost of compute, opacity, and their own distributional sensitivity. Because our goal is to audit the components of a consensus pipeline rather than to maximize classifier accuracy, we deliberately retain VADER and quantify its failure modes on an out-of-domain, meme-dominated corpus; the audit methodology itself applies identically to any classifier that maps text to a polarity valence.
 
 \section{Proposed Methodology: PACE}
 
@@ -325,16 +329,57 @@ Table~\ref{tab:ablation} and Fig.~\ref{fig:ablation} reveal a clear scenario-dep
 This demonstrates that \textbf{temporal decay and smearing calibration are specifically essential for dynamic, time-evolving discussions where late consensus diverges from early traffic}.
 
 \subsection{Real-World YouTube Case Study and Lexicon Audit (Scenario 4)}
-Dataset 4 is an observational case study on 100 comments from video \texttt{dQw4w9WgXcQ} (Fig.~\ref{fig:youtube}), collected via the YouTube Data API v3 with a dated SHA-256 provenance manifest. Auditing this corpus reveals critical practical limitations in both semantic analysis and exposure modeling:
+Dataset 4 is an observational case study on 100 comments from video \texttt{dQw4w9WgXcQ} (Fig.~\ref{fig:youtube}), collected via the YouTube Data API v3 with a dated SHA-256 provenance manifest. Auditing this corpus reveals critical practical limitations in both semantic analysis and exposure modeling.
+
+\begin{table}[t]
+\caption{Per-class reliability of VADER against a single-annotator human reference on the 100-comment YouTube corpus. Overall accuracy is 65.0\% and macro-averaged $F_1$ is 0.5307.}
+\label{tab:lexicon}
+\centering
+\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{$F_1$} & \textbf{Support} \\
+\midrule
+Positive & 0.7027 & 0.5652 & 0.6265 & 46 \\
+Neutral  & 0.7872 & 0.7255 & 0.7551 & 51 \\
+Negative & 0.1250 & 0.6667 & 0.2105 & 3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \begin{itemize}
     \item \textbf{Single-Annotator Manual Validation of Lexicon Reliability:} To evaluate whether off-the-shelf sentiment lexicons provide a viable foundation for consensus weighting, we manually labeled all 100 comments with a single annotator under a written protocol (\path{experiments/evaluate_vader_accuracy.py}). Under a standard 3-class scheme (positive, neutral, negative), VADER achieves an overall accuracy of only 65.0\% and a macro $F_1$-score of 0.5307. Beyond 46\% zero-inflation (46 comments scoring exactly compound 0.000, including rank \#30 with 1,011,942 likes and rank \#18 with 569,620 likes), VADER exhibits a critical failure mode on informal praise: 11 of 46 true positive comments (23.9\%) are misclassified as negative. These errors stem from positive slang (\emph{``so sick''}, \emph{``his voice kills''}, \emph{``it's fire tho''}), idiomatic negations (\emph{``could not be happier''}, which VADER treats as negative due to ``not''), lyric quotations (\emph{``never gonna give you up''}), or curse intensifiers. As a result, VADER's precision on the negative class is merely 12.5\% (2 of 16 predicted negative comments are genuinely critical). More broadly, the comments center on the ``rickroll'' cultural meme rather than policy or product feedback, rendering an abstract ``consensus'' estimand ill-defined.
+    \item \textbf{Chance-Corrected Semantic Agreement:} VADER's 65.0\% overall accuracy must be read against a trivial baseline: predicting the majority class (``neutral'') on every comment already attains 51.0\%. VADER exceeds this baseline at marginal significance (exact McNemar $p = 0.044$), yielding a moderate chance-corrected agreement of Cohen's $\kappa = 0.402$. Per-class confidence intervals further expose a fragile negative class: with only three ground-truth negative comments, its precision is $0.125$ (95\% Wilson interval $[0.035, 0.360]$), whereas positive precision is $0.703$ $[0.542, 0.825]$ and neutral precision is $0.787$ $[0.651, 0.880]$. The 46\% zero-inflation rate is robustly bounded (95\% Wilson interval $[0.366, 0.557]$).
     \item \textbf{Statistical Indistinguishability:} Point estimates across estimators span a narrow range of $0.044$ (Unweighted $\mu = 0.114$, Heuristic $\mu = 0.123$, NC-IPS $\mu = 0.116$, PACE $\mu = 0.079$). All point estimates fall well within PACE's 95\% refitting bootstrap confidence interval ($[-0.03, 0.17]$). The permutation divergence test ($p = 0.36582$) indicates that the observed difference between PACE and the heuristic is statistically indistinguishable from null exchangeable noise.
     \item \textbf{Sensitivity to Exposure-Baseline Calibration:} In contrast to ideal rank-order invariance, PACE's studentized residuals $\delta_i = L_i - \hat{\mathbb{E}}[L_i \mid r_i, \Delta t_i]$ depend non-linearly on baseline scale relative to the empirical MAD. The observational fit exhibits poor absolute calibration (expected-to-observed like ratio $\approx 6.221$), underscoring that observational fits provide exposure-conditioning diagnostics and not real-world accuracy claims. Scaling the fitted baseline $\hat{\mathbb{E}}$ from $0.25\times$ to $2.0\times$ shifts PACE's estimate from $0.049$ to $0.082$, while a square-root distortion shifts it to $0.108$ (documented in \path{experiments/sensitivity_analysis.py}). The model is therefore sensitive to exposure specification and baseline scaling.
     \item \textbf{Temporal Compression and Degenerate Fit:} Because comments were retrieved 9--17 years after video upload, $\ln(1 + \Delta t)$ varies over a compressed range ($\approx 0.24$ standard deviations), forcing OLS into degenerate parameter regimes (implied amplitude $\hat{\alpha} = e^{\hat{\beta}_0} s_{\text{smear}} \approx 8 \times 10^{71}$ and temporal decay exponent $\hat{\lambda} = -\hat{\beta}_2 \approx 13.2$) and causing $54\%$ of total weight to concentrate on the 48 comments whose predicted baseline likes exceed observed counts by $>10\times$.
     \item \textbf{Ranking Endogeneity:} Commercial platform relevance algorithms incorporate like counts into ranking decisions. Regressing likes onto display rank is therefore partially circular (endogenous), meaning the fitted baseline reflects an observational association rather than an exogenous counterfactual exposure curve.
 \end{itemize}
 
-\section{Limitations}
+\subsection{Multi-Video Observational Extension}
+To test whether the single-corpus observations generalize beyond one meme-dominated video, we extend the observational analysis to three additional technology-review videos retrieved through the same YouTube Data API v3 procedure (\path{experiments/fetch_multivideo_corpus.py}, dated SHA-256 provenance; retrieved 2026-11-04). For each video we take the top $N = 100$ relevance-ordered comments, score them with VADER, and apply the four estimators. Table~\ref{tab:multivideo} reports the results alongside the original corpus.
+
+\begin{table*}[t]
+\caption{Observational extension across four YouTube domains ($N = 100$ relevance-ordered comments each). ``Zero'' is the fraction of comments with VADER compound score exactly $0.0$. All consensus point estimates are positive.}
+\label{tab:multivideo}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccccccc}
+\toprule
+\textbf{Video} & \textbf{Pos} & \textbf{Neu} & \textbf{Neg} & \textbf{Zero} & $\hat{\mu}_{\text{unw}}$ & $\hat{\mu}_{\text{heur}}$ & $\hat{\mu}_{\text{IPS}}$ & $\hat{\mu}_{\text{PACE}}$ \\
+\midrule
+Rick Astley (meme) & 37 & 47 & 16 & 46\% & $+0.114$ & $+0.123$ & $+0.116$ & $+0.079$ \\
+Budget smartphone  & 43 & 48 & 9  & 47\% & $+0.169$ & $+0.162$ & $+0.174$ & $+0.192$ \\
+iPhone review      & 72 & 11 & 17 & 11\% & $+0.376$ & $+0.412$ & $+0.409$ & $+0.350$ \\
+Thin-device reveal & 31 & 50 & 19 & 50\% & $+0.085$ & $+0.059$ & $+0.075$ & $+0.067$ \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Two patterns emerge. First, \textbf{VADER zero-inflation is strongly domain-dependent}: it ranges from 11\% on the emotionally charged iPhone review to 46--50\% on the remaining videos, demonstrating that the 46\% zero-inflation measured on the Rick Astley corpus is not a single-video artifact but a recurring property of informal praise that the lexicon scores as exactly neutral. Second, \textbf{the ordering of the four estimators is inconsistent across videos}: on the iPhone review PACE yields the lowest estimate ($+0.350$) while the heuristic yields the highest ($+0.412$), whereas on the smartphone review PACE yields the highest ($+0.192$) and the heuristic the lowest ($+0.162$). No estimator is uniformly more extreme or more conservative, corroborating on independent data the conclusion that exposure-conditioned weighting is a sensitive diagnostic rather than a universal correction. This extension is observational and lexicon-scored only; the human-annotated accuracy audit of Table~\ref{tab:lexicon} remains restricted to the Rick Astley corpus.
+
+\section{Limitations and Threats to Validity}
 \begin{enumerate}
     \item \textbf{Ranking Endogeneity vs. True Exposure:} PACE uses display rank as an observable proxy for visual exposure. However, platform recommendation algorithms utilize upvote counts to determine display rank, creating simultaneous endogeneity that violates strict exogeneity assumptions.
     \item \textbf{Exposure Baseline Specification Sensitivity:} Residual standardization via MAD and sigmoidal gating is not invariant to baseline scale or functional form; misspecifying the exposure baseline can introduce non-trivial shifts in weighted consensus.
@@ -342,10 +387,11 @@ Dataset 4 is an observational case study on 100 comments from video \texttt{dQw4
     \item \textbf{Participant vs. Viewer Selection Gap:} Our estimand measures consensus among active commenters. Silent viewers who never engage are systematically unobserved, requiring representative external polling to assess whole-population opinion \cite{zhao2025spiral}.
     \item \textbf{Absence of Semantic Stance Decomposition:} The geometric hierarchy damping factor $\phi^{d_i}$ discounts reply depth uniformly, but does not distinguish between supportive affirmations and adversarial rebuttals in conversation trees \cite{zubiaga2016stance}.
     \item \textbf{Single-Annotator Reference Labels:} The 100 reference labels were produced by one annotator without an inter-annotator agreement statistic. With $N = 100$, the 65.0\% VADER accuracy has a 95\% Wilson interval of roughly [55\%, 74\%], so the lexicon-failure findings should be read as indicative rather than definitive.
+    \item \textbf{Marginal Advantage over Trivial Baselines (Conclusion Validity):} The semantic layer's headline accuracy is modest once chance-corrected. VADER's 65.0\% exceeds the 51.0\% majority-class baseline (always predicting ``neutral'') at only marginal significance (exact McNemar $p = 0.044$), corresponding to a moderate Cohen's $\kappa = 0.402$. Moreover, the negative class rests on three ground-truth examples, so its precision estimate ($0.125$, 95\% Wilson interval $[0.035, 0.360]$) is indicative rather than precise. These bounds imply that rule-based lexicons provide a weak but non-trivial semantic signal on this corpus, and that any downstream consensus estimate inherits this uncertainty.
 \end{enumerate}
 
 \section{Conclusion}
-This paper presents an empirical investigation and diagnostic framework for exposure-conditioned consensus estimation in ranked discussion streams. PACE demonstrates that combining a log-linear retrieval-proxy model, Duan's smearing retransformation, and robust residual gating can moderate heuristic like-amplification under specific conditions, such as late-emerging groundswells. However, our multi-trial benchmarks and sensitivity audits show that exposure-conditioned weighting is not a universally superior correction: its estimates depend heavily on how the target consensus is specified, and baseline scaling directly shifts output consensus. Furthermore, manual validation of real-world YouTube comments (single annotator, $N = 100$) indicates severe lexicon degradation (46\% zero-inflation, 65\% accuracy), while platform ranking endogeneity limits causal interpretations. The observational YouTube snapshot is descriptive only because historical exposure and participant ground truth are unobserved, despite contemporaneous API provenance. Rather than a drop-in replacement for arithmetic averaging, exposure-conditioned models should be deployed as sensitive diagnostic tools for auditing visibility-engagement biases in digital discourse.
+This paper presents an empirical investigation and diagnostic framework for exposure-conditioned consensus estimation in ranked discussion streams. PACE demonstrates that combining a log-linear retrieval-proxy model, Duan's smearing retransformation, and robust residual gating can moderate heuristic like-amplification under specific conditions, such as late-emerging groundswells. However, our multi-trial benchmarks and sensitivity audits show that exposure-conditioned weighting is not a universally superior correction: its estimates depend heavily on how the target consensus is specified, and baseline scaling directly shifts output consensus. Furthermore, manual validation of real-world YouTube comments (single annotator, $N = 100$) indicates severe lexicon degradation (46\% zero-inflation, 65\% accuracy), while platform ranking endogeneity limits causal interpretations. The observational YouTube snapshot is descriptive only because historical exposure and participant ground truth are unobserved, despite contemporaneous API provenance. On the semantic side, our manual audit shows that VADER---the de facto rule-based lexicon---is only marginally above a trivial majority-class baseline ($\kappa = 0.402$, exact McNemar $p = 0.044$), so consensus estimates built on lexicons inherit substantial semantic uncertainty. Rather than a drop-in replacement for arithmetic averaging, exposure-conditioned models should be deployed as sensitive diagnostic tools, and this work is best understood as a reproducible audit framework and dataset---not a claim of estimator or lexicon superiority---for auditing both visibility-engagement and semantic-reliability biases in digital discourse.
 
 \section*{Data and Reproducibility Statement}
 All code, datasets, and experiment runners are completely self-contained in the repository:
@@ -354,6 +400,8 @@ All code, datasets, and experiment runners are completely self-contained in the 
     \item \path{data/monte_carlo_trial_level_results.csv}: All 150 individual trial-level observations.
     \item \path{data/ablation_trial_level_results.csv}: All 150 individual ablation trial observations.
     \item \path{data/youtube_corpus_100_comments.csv}: Documented real YouTube dataset ($N=100$).
+    \item \path{experiments/fetch_multivideo_corpus.py}: Fetches and scores the four-video observational corpus (Table~\ref{tab:multivideo}) with dated SHA-256 provenance.
+    \item \path{data/multivideo_summary.csv}: Multi-video estimator and lexicon summary table.
 \end{itemize}
 
 \bibliographystyle{IEEEtran}

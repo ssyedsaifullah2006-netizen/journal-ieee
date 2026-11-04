@@ -1,6 +1,6 @@
 """
 Full Independent Reproducibility & Statistical Audit Script
-Author: Sayed Saifullah (VIT Semester 5 AI Project)
+Authors: Syed Saifullah S and Harish S (VIT Semester 5 AI Project)
 
 Outputs:
 1. data/monte_carlo_trial_level_results.csv: 150 individual trial-level observations (50 trials x 3 scenarios).

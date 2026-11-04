@@ -1,8 +1,8 @@
 # PACE IEEE Journal Submission Package
 
 This folder contains the complete, compilable IEEE journal manuscript package for:
-**"Exposure-Conditioned Consensus Estimation in Ranked Social Discussion Streams: Sensitivity, Endogeneity, and Empirical Auditing"**
-Author: **Sayed Saifullah** (Vellore Institute of Technology, India)
+**"Semantic Reliability and Exposure-Conditioned Consensus Estimation in Ranked Social Discussion Streams: Sensitivity, Endogeneity, and Empirical Auditing"**
+Authors: **Syed Saifullah S and Harish S** (Vellore Institute of Technology, India)
 
 ---
 

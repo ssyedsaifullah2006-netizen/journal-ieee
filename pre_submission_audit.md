@@ -1,6 +1,6 @@
 # Pre-Submission Evidence Gate: PACE Manuscript Audit
 
-**Current status: ALL AUDIT GATES PASSED. MANUSCRIPT AND CODEBASE FULLY READY FOR SUBMISSION.** All 30 bibliographic references verified with official publisher DOIs/URLs, the 72.1% statistic verified against Zhao et al. (arXiv:2502.00952), IEEEtran.cls bundled, and 22/22 QA verification checks pass cleanly.
+**Current status: ALL AUDIT GATES PASSED. MANUSCRIPT AND CODEBASE FULLY READY FOR SUBMISSION.** All 32 bibliographic references verified with official publisher DOIs/URLs, the 72.1% statistic verified against Zhao et al. (arXiv:2502.00952), IEEEtran.cls bundled, and 22/22 QA verification checks pass cleanly.
 
 This document tracks empirical verification gates, methodology disclosures, and provenance requirements for the manuscript. Following the strategic pivot to an **Audit and Diagnostic Framework for Exposure-Conditioned Sentiment Consensus**, all observational limits, lexicon degradation, baseline sensitivity, and ranking endogeneity are formally reported as primary scientific contributions.
 
@@ -9,11 +9,12 @@ This document tracks empirical verification gates, methodology disclosures, and 
 - **Deterministic Monte Carlo Benchmarks:** Synthetic generators, seeds (42..91), trial-level CSV tables ($M=50$ trials $\times$ 3 scenarios = 150 rows), and ablation tables reproduce identically via `experiments/reproduce_all_experiments.py`.
 - **Closed-Form Dynamic Regression:** Model dynamically fits log-linear parameters and Duan's smearing retransformation factor ($\ge 1.0$) across all trials.
 - **Corpus Provenance Verified:** The YouTube corpus (`data/youtube_corpus_100_comments.csv`) was retrieved via YouTube Data API v3 on 2026-10-30 at 07:09 UTC and is validated by a dated, SHA-256 provenance manifest (`youtube_corpus_100_comments.provenance.json`).
-- **Gold-Standard Human Semantic Audit:** An exhaustive human annotation of all 100 comments (`data/youtube_corpus_100_comments_human_labeled.csv` and `experiments/evaluate_vader_accuracy.py`) establishes that VADER achieves 65.0% accuracy, 0.5307 macro F1, 46% zero-inflation, and misclassifies 23.9% of positive comments as negative.
+- **Gold-Standard Human Semantic Audit:** An exhaustive human annotation of all 100 comments (`data/youtube_corpus_100_comments_human_labeled.csv` and `experiments/evaluate_vader_accuracy.py`) establishes that VADER achieves 65.0% accuracy (95% Wilson interval [55.3%, 73.6%]), 0.5307 macro F1, 46% zero-inflation, and misclassifies 23.9% of positive comments as negative. Chance-corrected, VADER exceeds the 51.0% majority-class baseline only marginally (exact McNemar $p = 0.044$, Cohen's $\kappa = 0.402$).
+- **Multi-Video Observational Extension:** `experiments/fetch_multivideo_corpus.py` retrieves 100 relevance-ordered comments from each of four YouTube domains (Rick Astley meme + three technology reviews, retrieved 2026-11-04, SHA-256 provenance). Across domains, VADER zero-inflation ranges 11%--50% and the four estimators' ordering is inconsistent (PACE lowest vs. highest on different videos), corroborating that exposure-conditioned weighting is a domain-sensitive diagnostic rather than a universal correction.
 - **Sensitivity Audits:** Systematic evaluation across ground truth targets ($Y^* \in [-0.40, +0.10]$) and baseline distortions ($0.25\times \dots 2.0\times, \sqrt{E}$) proves that PACE consensus swings with target definitions and baseline scale (`experiments/sensitivity_analysis.py`).
 - **Data-Generation Flaws Disclosed:** The manuscript explicitly discloses that likes in Scenarios 1 and 2 are drawn from uniform block cohorts rather than the parametric power law assumed by PACE.
-- **Bibliography Verified:** All 30 references in `latex/references.bib` are standard, verified academic entries with verified DOIs/URLs, including the corrected Dora Zhao et al. (arXiv:2502.00952, 2025) citation.
-- **Automated Verification:** All 20 QA checks in `experiments/run_exhaustive_verification.py` pass with 0 failures and 0 warnings.
+- **Bibliography Verified:** All 32 references in `latex/references.bib` are standard, verified academic entries with verified DOIs/URLs, including the corrected Dora Zhao et al. (arXiv:2502.00952, 2025) citation.
+- **Automated Verification:** All 22 QA checks in `experiments/run_exhaustive_verification.py` pass with 0 failures and 0 warnings.
 
 ## Methodological Boundaries and Framing Commitments
 
@@ -39,4 +40,7 @@ python experiments/generate_publication_figures.py
 
 # 5. Run exhaustive QA verifier
 python experiments/run_exhaustive_verification.py
+
+# 6. Fetch the four-video observational corpus (live API; dated provenance)
+python experiments/fetch_multivideo_corpus.py
 ```

@@ -47,8 +47,9 @@ A web-based AI platform that fetches social media comments (YouTube, Reddit), ru
 │   ├── reproduce_all_experiments.py    # 50-trial Monte Carlo benchmark
 │   ├── generate_publication_figures.py # 300 DPI IEEE figure generator
 │   ├── sensitivity_analysis.py         # Ground-truth & baseline sensitivity audit
-│   ├── run_exhaustive_verification.py  # 20-test QA verification suite
-│   └── fetch_real_youtube_corpus.py    # YouTube Data API v3 live scraper
+│   ├── run_exhaustive_verification.py  # 22-test QA verification suite
+│   ├── fetch_real_youtube_corpus.py    # YouTube Data API v3 live scraper (N=100)
+│   └── fetch_multivideo_corpus.py      # 4-video observational corpus + provenance
 ├── rag/
 │   ├── vector_store.py        # ChromaDB wrapper
 │   └── qa_chain.py            # Gemini RAG Q&A chain
@@ -61,8 +62,8 @@ A web-based AI platform that fetches social media comments (YouTube, Reddit), ru
 
 This repository includes the complete research implementation, reproducibility benchmarks, and IEEE journal submission package for:
 
-**"Exposure-Conditioned Consensus Estimation in Ranked Social Discussion Streams: Sensitivity, Endogeneity, and Empirical Auditing"**  
-*Author:* Sayed Saifullah (Vellore Institute of Technology, India)
+**"Semantic Reliability and Exposure-Conditioned Consensus Estimation in Ranked Social Discussion Streams: Sensitivity, Endogeneity, and Empirical Auditing"**  
+*Authors:* Syed Saifullah S and Harish S (Vellore Institute of Technology, India)
 
 ### Key Contributions & Novelty
 - **Preferential-Attachment Corrected Endorsement (PACE)**: Formulates expected engagement as an empirical function of display rank ($r_i$) and arrival delay ($\Delta t_i$).
@@ -87,7 +88,7 @@ python experiments/run_exhaustive_verification.py
 
 ### Paper & Dataset Structure
 - `latex/paper.tex`: Full IEEE Transactions two-column manuscript.
-- `latex/references.bib`: 30 bibliographic references (including monographs, peer-reviewed conference/journal proceedings, and preprints).
+- `latex/references.bib`: 32 bibliographic references (including monographs, peer-reviewed conference/journal proceedings, and preprints).
 - `latex_submission_package.zip`: Ready-to-upload Overleaf project zip.
 - `figures/`: 300 DPI publication figures (`fig1`–`fig4`).
 - `data/monte_carlo_trial_level_results.csv`: 150 individual trial-level benchmark observations.
@@ -99,6 +100,8 @@ python experiments/run_exhaustive_verification.py
 - `data/youtube_corpus_100_comments.csv`: 100 genuine YouTube API comments fetched on 2026-10-30 with dated SHA-256 provenance manifest (`.provenance.json`).
 - `data/youtube_corpus_100_comments_human_labeled.csv`: Gold-standard human-annotated sentiment audit for all 100 comments.
 - `experiments/evaluate_vader_accuracy.py`: Rigorous validation script evaluating VADER against human ground truth.
+- `experiments/fetch_multivideo_corpus.py`: Fetches four YouTube domains (Rick Astley + three tech reviews, $N=100$ each) with dated SHA-256 provenance.
+- `data/multivideo_summary.csv`: Multi-video VADER distribution, zero-inflation, and estimator comparison table.
 
 ---
 
